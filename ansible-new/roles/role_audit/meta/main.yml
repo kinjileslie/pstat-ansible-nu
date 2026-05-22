@@ -1,0 +1,10 @@
+---
+# role_audit meta
+galaxy_info:
+  author: kinji
+  description: Provides audit logging for Ansible role execution.
+  license: MIT
+  min_ansible_version: 2.9
+  platforms:
+    - name: EL9
+dependencies: []

@@ -1,0 +1,20 @@
+---
+- name: Ensure audit log directory exists
+  ansible.builtin.file:
+    path: /var/log/ansible-provisioning
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Append success entry to internal audit log
+  ansible.builtin.lineinfile:
+    path: /var/log/ansible-provisioning/audit.log
+    line: "{{ ansible_date_time.iso8601 }} | ROLE: {{ audit_role_name }} | STATUS: SUCCESS | OPERATOR: {{ ansible_user }} | HOST: {{ inventory_hostname }}"
+    create: yes
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Send success signal to syslog/messages
+  ansible.builtin.shell: "logger -t ansible-audit 'Role {{ audit_role_name }} applied successfully to {{ inventory_hostname }} by {{ ansible_user }}'"

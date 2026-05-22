@@ -1,0 +1,16 @@
+# --- External Source Repos (Harvesting Sources) ---
+# We do not commit the source material, only the refined roles we extract from them.
+janus/
+git.lsit/
+
+# --- Ansible/System Junk ---
+*.retry
+*.log
+.pytest_cache/
+.vagrant/
+
+# --- Secrets & Environment ---
+# Ensure no private keys or sensitive environment files are committed
+*.pem
+*.key
+.env

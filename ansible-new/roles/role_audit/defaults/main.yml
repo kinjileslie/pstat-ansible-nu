@@ -1,0 +1,4 @@
+---
+# role_audit: The "Flight Recorder" for the PSTAT baseline.
+# This role is intended to be included at the end of other roles
+# to provide a permanent audit trail of changes.

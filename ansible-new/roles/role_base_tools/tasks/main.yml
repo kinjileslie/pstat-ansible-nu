@@ -3,3 +3,9 @@
   ansible.builtin.package:
     name: "{{ pstat_base_packages }}"
     state: present
+
+- name: Audit role success
+  ansible.builtin.include_role:
+    name: role_audit
+  vars:
+    audit_role_name: "role_base_tools"

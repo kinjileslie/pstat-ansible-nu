@@ -18,3 +18,9 @@
     name: fail2ban
     state: started
     enabled: yes
+
+- name: Audit role success
+  ansible.builtin.include_role:
+    name: role_audit
+  vars:
+    audit_role_name: "role_fail2ban"

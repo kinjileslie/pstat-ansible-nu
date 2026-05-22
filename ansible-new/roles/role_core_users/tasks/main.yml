@@ -23,3 +23,9 @@
   ansible.builtin.user:
     name: "{{ support_user }}"
     password_lock: yes
+
+- name: Audit role success
+  ansible.builtin.include_role:
+    name: role_audit
+  vars:
+    audit_role_name: "role_core_users"
