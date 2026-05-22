@@ -13,6 +13,7 @@ The following files contain the strategic and technical blueprint:
 ## 2. OPERATIONAL TOOLING
 - verification_script.sh: The bash script used to verify the baseline on target VMs.
 - kinji_pstat.yml: The finalized cloud-init configuration for AlmaLinux 9.
+- Provisioning Key Architecture: Cloud-Init contains only Bobby's key; Ansible `role_ssh_keys` manages all other admin keys.
 
 ## 3. CURRENT PROGRESS & STATE
 - Session Summary: See 'session_summary.txt' for the high-level status.
@@ -25,9 +26,14 @@ The following files contain the strategic and technical blueprint:
     - Layer 1 (System Base) fully implemented: OS Updates, Repos, Base Tools, Core Users, NTP.
     - Layer 2 (The Shield) fully implemented: Zone-based Firewall and Fail2Ban.
 - Pending: 
-    - Layer 3 (Compliance): Optional CIS/CUI Hardening.
-    - Layer 4 (Infrastructure): Monitoring, Logging, Backups.
-    - Layer 5 (Application Stack): Researcher tools and PSTAT apps.
+    - Layer 3 (Hardening): Optional CIS/CUI Hardening.
+        - [ ] Implement LVM-based CUI partitioning scheme (Separate LVs for /tmp, /var, /var/log, /var/log/audit).
+        - [ ] Implement "Workhorse" LVM volume for rootless Podman storage to prevent /home exhaustion.
+        - [ ] Create `/etc/profile.d/` trigger script to automatically symlink rootless container storage from SSSD-created home dirs to the Workhorse volume.
+        - [ ] Integrate xfs_quotas into base system configuration for /home management.
+        - [ ] Deploy `deploy_l3_compliance.yml` using `RedHatOfficial.rhel9_cui`.
+    - Layer 4 (System Apps): Identity (LDAP/SSSD), Monitoring, Logging, Backups, NFS.
+    - Layer 5 (User Apps): Pods, Scientific Stack, RStudio.
 
 ## 4. EXTERNAL SOURCE REPOS (FOR HARVESTING)
 - git.lsit: /Users/kinji/git.lsit/ansible-playbooks (Modern, Atomic tasks)

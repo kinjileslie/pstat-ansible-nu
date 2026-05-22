@@ -1,78 +1,8 @@
-# PSTAT Ansible Dev Journal: Lessons Learned
-# A record of "hard-won" technical discoveries to avoid repeated failures.
+# PSTAT Dev Journal
+# Record of "hard-won" lessons and traps encountered during setup.
 
-## 1. The "SOCKS vs. Jump" DNS Trap
-- Symptom: 'channel 0: open failed: connect failed: Name or service not known' when jumping from Flanker.
-- Discovery: When using a SOCKS proxy (e.g., via dlr.lsit) and then a ProxyJump, the remote jump host (Bobby) attempts a raw TCP connection to the next hop. It does NOT read the SSH client config (~/.ssh/config).
-- Lesson: Hostnames like 'ctrl1' that are only aliases in a config file will fail in a ProxyJump tunnel. You must use the fully qualified name (e.g., 'ctrl1.node') or, more simply, execute the Ansible run from the jump host (Bobby) that already possesses the correct SSH config.
-
-## 2. The "Tire Fire" Connectivity Strategy
-- Discovery: The chain Flanker -> DLR -> Bobby -> UFO-Race -> Ctrl1 -> VM is too fragile for direct client-side management.
-- Lesson: Move the "Brain" (Ansible) as close to the target as possible. Running Ansible on Bobby eliminates the most volatile layers of the tunnel and allows the use of Bobby's internal, complex SSH routing.
-
-## 3. The "Cloud-Init Package Order" Bug
-- Symptom: 'Unable to find a match: fail2ban' during the first boot.
-- Discovery: The 'packages' block in cloud-init is an atomic transaction. If one package (fail2ban) requires a repo (epel-release) that is being installed in the same block, the transaction can fail because the repo isn't "active" yet.
-- Lesson: Install the repository and run 'dnf makecache' as a sequenced command in 'runcmd' BEFORE calling the installation of packages that depend on that repository.
-
-## 4. The "Sudoers/Wheel" Requirement
-- Discovery: Ansible's 'become: yes' requires non-interactive sudo.
-- Lesson: Ensure the 'wheel' group is explicitly granted NOPASSWD in /etc/sudoers.d/ to prevent the Ansible pipeline from hanging on a password prompt during the first boot.
-
-## 5. SSH Agent Forwarding vs. Key Copying
-- Discovery: Keys reside on different jump hosts (e.g., the 'ufo' key on Bobby).
-- Lesson: Never copy private keys across the chain. Use 'ssh-add' and 'ForwardAgent yes' (or the -A flag) to allow the target VM to verify identity against the local agent on the workstation.
-
-## 2026-05-20: The @lsit-common Lockout Mystery
-- **Symptom**: After running `dnf install @lsit-common`, all SSH connections to the target VMs were immediately dropped with `kex_exchange_identification: Connection closed by remote host`.
-- **Investigation**:
-    - Ruled out Firewall, Fail2Ban, TCP Wrappers, and SELinux.
-    - Attempted manual sshd debug mode on forger4 console.
-- **Discovery**: Found a critical library mismatch: `OpenSSL version mismatch. Built against 30000070, you have 30500010`.
-- **Conclusion**: The `@lsit-common` group installs a package that overrides the system OpenSSL libraries with an incompatible version, causing the SSH daemon to crash instantly upon connection.
-
-## 2026-05-21: The Resolution
-- **The Fix**: Implemented `role_os_updates` as the first step of L1.
-- **The Result**: `forger5` successfully ran the entire L1 sequence, including the `@lsit-common` group installation, without any SSH lockout.
-- **Lesson**: Never assume a "common" group is safe on a vanilla cloud image. The base OS must be fully patched to ensure library compatibility with institutional repositories.
-
-## 2026-05-21: Sudo Redundancy Observation
-- **Symptom**: `sudo -l` for the 'support' user shows three redundant permission lines:
-    1. (ALL) ALL
-    2. (ALL) NOPASSWD: ALL
-    3. (ALL) NOPASSWD: ALL
-- **Cause**: Overlap between the default \%wheel group rule in `/etc/sudoers`, the cloud-init `/etc/sudoers.d/wheel-nopasswd` file, and the new `role_core_users` explicit user rule.
-- **Status**: Non-breaking, but redundant. Marked for cleanup in a future "refinement" pass to move toward group-based rather than user-based permissions.
-
-## 2026-05-21: Firewall Zoning Plan
-- Decision: Drop the PXC zone. The Percona IP list (169.231.230.59, .79, 169.231.234.57, .59, .69, .70, .72, 169.231.235.142, .139) is no longer required for this baseline.
-- New "Internal" Definition: Defined the PSTAT subnet as 128.111.219.0/24.
-- Campus Expansion: Broadened the campus IP set to include:
-    - 128.111.0.0/16
-    - 169.229.0.0/16
-    - 169.230.0.0/15
-    - 169.232.0.0/15
-- Strategy: Using a zone-based approach to keep the 'public' zone locked down to SSH while routing trusted institutional traffic through specific, manageable zones.
-
-## 2026-05-21: Firewall Service Dependency Discovery
-- **Issue**: Attempting to enable 'splunkd' and 'pmm1' services in firewalld failed because the service definitions (.xml files) did not exist.
-- **Discovery**: On production servers (e.g., roble), these services are likely provided by the software packages themselves during installation.
-- **Decision**: Remove these services from the base `role_firewall`.
-- **New Pattern**: Third-party services should be defined and enabled by their respective application roles (e.g., a future `role_splunk` will handle its own firewall rules) rather than the base firewall role. This maintains the Principle of Least Privilege.
-
-## 2026-05-21: Shift to Single Source of Truth (SSOT) for Networking
-- **Problem**: Redundant IP lists across role_firewall and role_fail2ban.
-- **Solution**: Centralized all infrastructure IPs (Jump hosts, Backup, Monitoring) into `group_vars/pstat.yml`.
-- **Impact**: Roles now reference shared variables. Updating a jump host IP in one place now propagates to both the Firewall and Fail2Ban.
-
-## 2026-05-21: To-Do for Next Session
-- [ ] Add NTP server IPs (128.111.1.5, 128.111.1.6) to `group_vars/pstat.yml`.
-- [ ] Add the "Version Breadcrumb" task to `role_firewall`.
-- [ ] Begin L3 Infrastructure implementation (starting with Time/NTP and then Monitoring/Logging).
-
-## 2026-05-21: Workflow Maturity - Harness vs Deliverables
-- **Realization**: We need a way to test "The Whole" while deploying "The Parts."
-- **Pattern**: Adopted a dual-track system. 
-    - 'deploy_lX.yml' files are the formal deliverables for the Layer Cake.
-    - 'test_l1_safe.yml' (and future test playbooks) serve as the integration harness.
-- **Requirement**: The agent must maintain strict synchronization between the harness and the deliverables. If a role is added to a layer, it must be added to both the deliverable and the harness.
+## [2026-05-21] The Cloud-Init Trap
+**Incident**: Attempted to implement SSH hardening (`PermitRootLogin prohibit-password` and `PasswordAuthentication no`) and LVM partitioning directly in the `cloud-config` (kinji_pstat.yml).
+**Result**: Locked out of both SSH and the Harvester Console. The console password was rejected because the hardening config explicitly forbade password logins for root.
+**Lesson**: Cloud-Init is for "Minimum Viable Boot" only. Any configuration that can "lock the door" (SSH, Firewall, Disk Partitions) must be moved to the Ansible pipeline. 
+**Impact**: Moving forward, Cloud-Init will only handle Identity, Base Tools, and Connectivity. Everything else is an Ansible task.

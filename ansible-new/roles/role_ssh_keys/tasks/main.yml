@@ -1,0 +1,8 @@
+---
+- name: Ensure administrative SSH keys are present
+  ansible.posix.authorized_key:
+    user: root
+    state: present
+    key: "{{ item }}"
+  loop: "{{ administrative_keys }}"
+  tags: [ 'ssh_keys', 'access' ]

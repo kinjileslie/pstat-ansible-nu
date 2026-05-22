@@ -1,0 +1,6 @@
+---
+- name: Analyze CUI Hardening Impact
+  hosts: all
+  become: yes
+  roles:
+    - RedHatOfficial.rhel9_cui

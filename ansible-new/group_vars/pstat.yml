@@ -1,27 +1,5 @@
 ---
-# PSTAT Infrastructure Network Identities
-# This is the Single Source of Truth (SSOT) for network-based access control.
-
-# Management & Jump Host Identities
-# These IPs are trusted for SSH and are ignored by Fail2Ban.
-pstat_mgmt_ips:
-  - 169.231.230.113  # eddie.lsit.ucsb.edu
-  - 128.111.90.175   # albedo.lsit.ucsb.edu
-  - 169.231.235.191  # bob.aristotle.ucsb.edu
-  - 128.111.126.115  # dlr.lsit.ucsb.edu
-  - 128.111.90.54    # unifi.lscg.ucsb.edu
-  - 128.111.219.20   # sauza.pstat.ucsb.edu
-
-# Backup Infrastructure
-pstat_backup_ips:
-  - 128.111.90.156   # backup-network
-
-# Monitoring Infrastructure
-pstat_monitoring_ips:
-  - 169.231.234.39
-  - 169.231.230.29
-
-# Time Infrastructure
-pstat_ntp_servers:
-  - 128.111.1.5
-  - 128.111.1.6
+# administrative_keys: List of public keys for system administrators
+administrative_keys:
+  - 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC0+GqBqJFni9JPgGFsiyOyOewzekPllqoQEMHhMY7ntasnRPUEzOX50RkOhpI40PRcFQz0r8ZFbl1HX8wbg9kBfEj5xOResI34y/5ZU+RwXLT9lrjikFP+MjnbZPJjhDrm6rZJfJ/UIiiAbbEsBpY3NyM3u1MNhAPD39MEsbcmbgov07HE3PgsxzAbWlFmUbt0F3nVMZRAWQ3yZITSMZkkdBHQxV8LjdM1HMb3GyE7vc5vlmOyLVawM7fQWGUXl10/yeAiddm8Bin1OOiQN3YhW1ZvinfIS2bZ2+i65qI0zQ7lNOKI/48w43eo/zPXyRUsUaGzQoFpPcnIj+UbYlOd root@bob.aristotle.ucsb.edu'
+  - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICmYbEl6z3i33wzMROZz549ajMMVtWc6xhvi9TWGFVeQ kinji@ucsb'

@@ -7,37 +7,28 @@
 
 ---
 
-## II. The Layer Cake (The Execution Order)
+## THE LAYER CAKE ARCHITECTURE
+The deployment is structured as a series of sequential layers. Each layer must be stable before the next is applied.
 
-### Layer 1: System Base (The Foundation)
-* Goal: A reachable, updated, and manageable Linux box.
-* Role: role_os_updates
-* Role: role_ntp
-* Role: role_repos
-* Role: role_base_tools
-* Role: role_core_users
+- Layer 1: System Base (The Birth)
+  - Goal: Minimum viable OS state.
+  - Roles: role_os_updates, role_ntp, role_repos, role_base_tools, role_core_users.
+  
+- Layer 2: The Shield (The Perimeter)
+  - Goal: Secure the network and prevent brute-force.
+  - Roles: role_firewall, role_fail2ban.
 
-### Layer 2: The Shield (The Perimeter)
-* Goal: Security compliance and network isolation.
-* Role: role_firewall
-* Role: role_fail2ban
+- Layer 3: Hardening (The Fortress)
+  - Goal: Apply high-security benchmarks (CIS/CUI).
+  - Execution: Optional/Selective via standalone policy playbook.
 
-### Layer 3: Compliance (The Fortress)
-* Goal: Apply high-security benchmarks (CIS/CUI).
-* Note: Implemented as a separate, optional policy playbook to avoid "shadow configuration" in host_vars.
+- Layer 4: System Apps (The Plumbing)
+  - Goal: Integrating the server into the PSTAT management ecosystem.
+  - Roles: role_identity (LDAP/SSSD), role_monitoring, role_logging, role_backups, role_nfs, role_guest_agent.
 
-### Layer 4: Infrastructure (The Plumbing)
-* Goal: Integrating the server into the PSTAT management ecosystem.
-* Role: role_nfs_autofs
-* Role: role_monitoring
-* Role: role_backups
-* Role: role_guest_agent
-
-### Layer 5: Application Stack (The Payload)
-* Goal: Providing the actual tools for data science and statistics.
-* Role: role_podman
-* Role: role_scientific_stack
-* Role: role_rstudio_server
+- Layer 5: User Apps (The Payload)
+  - Goal: Providing the actual tools for data science and statistics.
+  - Roles: role_podman, role_scientific_stack, role_rstudio_server.
 
 ---
 
