@@ -1,0 +1,32 @@
+# Internal Agent Context: PSTAT Ansible Migration
+# Purpose: Maintain consistency in architectural approach across sessions.
+
+## 1. Core Objective
+Transition the 'forger2' server and future PSTAT nodes from a legacy, monolith-style Ansible configuration (Janus) to a modern, atomic, and explicit architecture.
+
+## 2. The Architectural "North Star"
+- Philosophy: "Atomic Roles -> Explicit Playbooks -> Flat Variables."
+- Decoupling: Separate the "What" (Playbook/Roles) from the "How" (Host Vars).
+- Avoidance of "Implicit Logic": No hidden 'when: podman is defined' switches. If a capability is needed, the role is explicitly listed in the playbook.
+- Layered Approach: 
+    L1: System Base (Repos, Tools, Users)
+    L2: Hardening (Firewall, Fail2Ban, SSH)
+    L3: PSTAT Infra (NFS, SNMP, Splunk, Bacula)
+    L4: Researcher Stack (Podman, Python, R, RStudio)
+
+## 3. The "Harvesting" Strategy
+- Sources: /Users/kinji/git.lsit/ansible-playbooks (Modern/Atomic) and /Users/kinji/janus/ansible (Legacy/Institutional Knowledge).
+- Method: Just-in-Time (JIT) auditing. Do not adopt roles blindly. Extract specific tasks/templates from legacy sources and wrap them in new, clean, single-purpose roles.
+- Priority: Modernize legacy Alma8 logic to Alma9 (e.g., powertools -> crb).
+
+## 4. Key Technical Constraints
+- Connectivity: Multi-hop tunnel (Flanker -> DLR -> Bobby -> UFO-Race -> Ctrl1 -> Target).
+- Execution Point: Ansible must run on 'Bobby' to leverage its internal SSH config and avoid DNS/Tunneling failures on the client.
+- Auth: Use SSH Agent Forwarding to avoid copying private keys to jump hosts.
+
+## 5. Definition of Done for a Role
+A role is complete when:
+1. It is atomic (does one thing).
+2. It is explicit (no hidden dependencies).
+3. It is verified via a 'test_script.sh' on the target VM.
+4. It is integrated into the 'site.yml' master playbook.

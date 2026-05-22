@@ -1,0 +1,10 @@
+---
+# Fail2Ban Role Meta
+galaxy_info:
+  author: kinji
+  description: Configures Fail2Ban to protect SSH and other services.
+  license: MIT
+  min_ansible_version: 2.9
+  platforms:
+    - name: EL9
+dependencies: []

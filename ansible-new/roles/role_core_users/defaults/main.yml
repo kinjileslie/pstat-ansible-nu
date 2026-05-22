@@ -1,0 +1,5 @@
+---
+# Defaults for the support user
+support_user: support
+support_shell: /bin/bash
+# we are not managing keys here as they are handled by cloud-init

@@ -1,0 +1,7 @@
+---
+- name: Layer 2 - The Shield
+  hosts: all
+  become: yes
+  roles:
+    - { role: role_firewall, tags: ['firewall'] }
+    - { role: role_fail2ban, tags: ['fail2ban'] }

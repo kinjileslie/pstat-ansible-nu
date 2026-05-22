@@ -1,0 +1,75 @@
+# PSTAT Ansible Architecture Plan
+
+## I. The Structural Philosophy
+* Pattern: Atomic Roles -> Explicit Playbooks -> Flat Variables.
+* The "Surgical" Approach: We do not "adopt" monolithic roles. We extract the specific logic (tasks/templates) from legacy sources and wrap them in new, single-purpose roles.
+* The Truth: The Playbook defines *what* is installed; the Host Vars define *how* it is configured.
+
+---
+
+## II. The Layer Cake (The Execution Order)
+
+### Layer 1: System Base (The Foundation)
+* Goal: A reachable, updated, and manageable Linux box.
+* Role: role_os_updates
+* Role: role_ntp
+* Role: role_repos
+* Role: role_base_tools
+* Role: role_core_users
+
+### Layer 2: The Shield (The Perimeter)
+* Goal: Security compliance and network isolation.
+* Role: role_firewall
+* Role: role_fail2ban
+
+### Layer 3: Compliance (The Fortress)
+* Goal: Apply high-security benchmarks (CIS/CUI).
+* Note: Implemented as a separate, optional policy playbook to avoid "shadow configuration" in host_vars.
+
+### Layer 4: Infrastructure (The Plumbing)
+* Goal: Integrating the server into the PSTAT management ecosystem.
+* Role: role_nfs_autofs
+* Role: role_monitoring
+* Role: role_backups
+* Role: role_guest_agent
+
+### Layer 5: Application Stack (The Payload)
+* Goal: Providing the actual tools for data science and statistics.
+* Role: role_podman
+* Role: role_scientific_stack
+* Role: role_rstudio_server
+
+---
+
+## III. The Final File Structure (On Bobby)
+~/kinji/ansible/
+├── inventories/
+│   └── pstat.ini               # Groups: [all_pstat], [jump_hosts], [share_servers], [compute_nodes]
+├── host_vars/
+│   └── forger2.yml             # Unique IDs, IP addresses, custom ports
+├── roles/
+│   ├── role_repos/             # (Harvested from git.lsit)
+│   ├── role_base_tools/        # (Harvested from git.lsit)
+│   ├── role_core_users/        # (Harvested from janus)
+│   ├── role_os_updates/        # (Harvested from git.lsit)
+│   ├── role_firewall/          # (Harvested from git.lsit/janus)
+│   ├── role_fail2ban/          # (Harvested from git.lsit)
+│   ├── role_ssh_hardening/     # (Harvested from cloud-init)
+│   ├── role_nfs_autofs/        # (Harvested from janus)
+│   ├── role_monitoring/        # (Harvested from janus/git.lsit)
+│   ├── role_backups/           # (Harvested from janus)
+│   ├── role_guest_agent/       # (Harvested from cloud-init)
+│   ├── role_podman/            # (Harvested from janus)
+│   ├── role_scientific_stack/   # (Harvested from janus)
+│   └── role_rstudio_server/    # (Harvested from janus)
+└── site.yml                    # The Master Playbook (The "Order Form")
+
+## IV. Execution Flow & Workflow
+1. Define Host -> inventories/pstat.ini
+2. Define Personality -> host_vars/forger2.yml
+3. Development Loop: 
+   - Use 'test_l1_safe.yml' (The Integration Harness) for rapid iteration using --tags and --limit.
+   - Mirror all role changes into the corresponding 'deploy_lX_...' deliverables.
+4. Production Deployment:
+   - Run 'deploy_l1_base.yml' -> 'deploy_l2_shield.yml' -> (Optional: apply_cis_hardening.yml) -> 'deploy_l4_infra.yml' -> 'deploy_l5_apps.yml'.
+5. Run -> ansible-playbook -i inventories/pstat.ini <playbook>.yml --limit <host>

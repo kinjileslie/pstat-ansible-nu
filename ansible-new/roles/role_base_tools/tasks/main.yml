@@ -1,0 +1,5 @@
+---
+- name: Install base system tools
+  ansible.builtin.package:
+    name: "{{ pstat_base_packages }}"
+    state: present

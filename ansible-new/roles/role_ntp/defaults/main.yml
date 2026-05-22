@@ -1,0 +1,4 @@
+---
+# NTP/Chrony Defaults
+# These are usually overridden by group_vars/pstat.yml
+ntp_servers: "{{ pstat_ntp_servers }}"

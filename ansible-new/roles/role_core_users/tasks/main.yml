@@ -1,0 +1,25 @@
+---
+- name: Ensure the support user exists
+  ansible.builtin.user:
+    name: "{{ support_user }}"
+    shell: "{{ support_shell }}"
+    state: present
+    append: yes
+
+- name: Ensure support user is in the wheel group
+  ansible.builtin.user:
+    name: "{{ support_user }}"
+    groups: wheel
+    append: yes
+
+- name: Configure passwordless sudo for support user
+  ansible.builtin.copy:
+    content: "{{ support_user }} ALL=(ALL) NOPASSWD:ALL"
+    dest: "/etc/sudoers.d/{{ support_user }}"
+    mode: '0440'
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Lock the support user password
+  ansible.builtin.user:
+    name: "{{ support_user }}"
+    password_lock: yes

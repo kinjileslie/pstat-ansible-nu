@@ -1,0 +1,15 @@
+[DEFAULT]
+# Ban settings
+bantime  = {{ fail2ban_bantime }}
+findtime = {{ fail2ban_findtime }}
+maxretry = {{ fail2ban_maxretry }}
+
+# Whitelist trusted jump hosts and mgmt IPs
+# We join the list from group_vars/pstat.yml into a space-separated string.
+ignoreip = {{ pstat_mgmt_ips | join(' ') }}
+
+[sshd]
+enabled = true
+port    = ssh
+logpath = %(sshd_log)s
+backend = %(sshd_backend)s

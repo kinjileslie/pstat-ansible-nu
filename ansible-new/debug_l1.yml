@@ -1,0 +1,18 @@
+---
+- name: Surgical L1 Debugging on Forger3
+  hosts: forger3
+  become: yes
+  tasks:
+    - name: STAGE A - Install LSIT Common Repository RPM
+      dnf:
+        disable_gpg_check: yes
+        name: "https://identity.aristotle.ucsb.edu/repo/lsit/el9/common/x86_64/lsit-release-9-1.el9.noarch.rpm"
+        state: present
+
+    - name: Flush handlers
+      meta: flush_handlers
+
+    - name: STAGE B - Install LSIT Common group (The Suspected Culprit)
+      dnf:
+        name: "@lsit-common"
+        state: present

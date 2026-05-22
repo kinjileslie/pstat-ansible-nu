@@ -1,0 +1,44 @@
+---
+- name: Ensure /etc/ansible exists
+  ansible.builtin.file:
+    path: /etc/ansible
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ensure firewalld is running
+  ansible.builtin.systemd:
+    name: firewalld
+    state: started
+    enabled: yes
+
+- name: Create IP sets from templates
+  ansible.builtin.template:
+    src: ipset.xml.j2
+    dest: "/etc/firewalld/ipsets/{{ item.name }}.xml"
+  loop: "{{ pstat_ipsets }}"
+
+- name: Ensure zones exist
+  ansible.posix.firewalld:
+    zone: "{{ item }}"
+    state: present
+    permanent: yes
+  loop: "{{ pstat_zones.keys() | list }}"
+
+- name: Configure and Reconcile Zones
+  ansible.builtin.include_tasks: manage_zone.yml
+  loop: "{{ pstat_zones.keys() | list }}"
+  loop_control:
+    loop_var: zone_name
+
+- name: Write Firewall Policy Version Breadcrumb
+  ansible.builtin.copy:
+    content: "Policy Version: {{ ansible_date_time.date }} | Applied by {{ ansible_env.USER }} | Baseline L2-MVP\n"
+    dest: /etc/ansible/firewall_version.txt
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Reload firewalld to apply changes
+  ansible.builtin.shell: "firewall-cmd --reload"

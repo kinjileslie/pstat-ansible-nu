@@ -1,0 +1,7 @@
+---
+- name: Test L1 Base Roles on Forger2
+  hosts: forger2
+  become: yes
+  roles:
+    - role_repos
+    - role_base_tools

@@ -1,0 +1,24 @@
+---
+- name: Resolve Source Conflicts for this zone
+  ansible.builtin.shell: "firewall-cmd --permanent --zone={{ zone_name }} --remove-source={{ 'ipset:' + ipset_name }}"
+  loop: "{{ pstat_ipsets | map(attribute='name') | list }}"
+  loop_control:
+    loop_var: ipset_name
+  when: 
+    - pstat_zones[zone_name].sources is defined
+    - "'ipset:' + ipset_name not in pstat_zones[zone_name].sources"
+  ignore_errors: yes
+
+- name: Apply Zone Sources
+  ansible.builtin.shell: "firewall-cmd --permanent --zone={{ zone_name }} --add-source={{ item }}"
+  loop: "{{ pstat_zones[zone_name].sources | default([]) }}"
+  when: pstat_zones[zone_name].sources is defined
+
+- name: Apply Zone Services
+  ansible.posix.firewalld:
+    zone: "{{ zone_name }}"
+    service: "{{ item }}"
+    state: enabled
+    permanent: yes
+  loop: "{{ pstat_zones[zone_name].services | default([]) }}"
+  when: pstat_zones[zone_name].services is defined

@@ -1,0 +1,35 @@
+---
+# Firewall Configuration Defaults
+# Define IP sets as: { name: 'set_name', type: 'hash:net' or 'hash:ip', ips: [ 'ip1', 'ip2' ] }
+
+pstat_ipsets:
+  - name: internal
+    type: "hash:net"
+    ips: ["128.111.219.0/24"]
+  - name: campus
+    type: "hash:net"
+    ips: ["128.111.0.0/16", "169.229.0.0/16", "169.230.0.0/15", "169.232.0.0/15"]
+  - name: monitoring
+    type: "hash:ip"
+    ips: "{{ pstat_monitoring_ips }}"
+  - name: backup-network
+    type: "hash:ip"
+    ips: "{{ pstat_backup_ips }}"
+
+# Zone Mapping: Each zone has its OWN unique source IP set.
+# NO overlap between sources to avoid ZONE_CONFLICT.
+pstat_zones:
+  public:
+    services: ["ssh", "snmp"]
+  internal:
+    sources: ["ipset:internal"]
+    services: ["ssh", "snmp", "bacula-client", "cockpit", "dhcpv6-client", "mdns"]
+  monitoring:
+    sources: ["ipset:monitoring"]
+    services: ["snmp"]
+  backup-network:
+    sources: ["ipset:backup-network"]
+    services: ["bacula-client"]
+  campus:
+    sources: ["ipset:campus"]
+    services: []

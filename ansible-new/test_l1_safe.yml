@@ -1,0 +1,12 @@
+---
+- name: Full Layer 1 & 2 Baseline Implementation
+  hosts: all
+  become: yes
+  roles:
+    - { role: role_os_updates, tags: ['updates'] }
+    - { role: role_ntp, tags: ['ntp'] }
+    - { role: role_repos, tags: ['repos'] }
+    - { role: role_base_tools, tags: ['tools'] }
+    - { role: role_core_users, tags: ['users'] }
+    - { role: role_firewall, tags: ['firewall'] }
+    - { role: role_fail2ban, tags: ['fail2ban'] }

@@ -1,0 +1,22 @@
+# PSTAT Network Topology & Connectivity Map
+
+## The Jump Chain
+Connection Flow:
+Flanker (Laptop) -> [SOCKS Proxy :12345] -> bobby.lsit.ucsb.edu -> ufo-race -> ctrl1.node -> Target VM (e.g., forger2)
+
+## Critical Discoveries
+1. The "UFO-Race" Mystery: 
+   Bobby's ~/.ssh/config uses a ProxyJump to 'ufo-race' (race.aristotle.ucsb.edu) to reach 'ctrl1'. 
+   This is NOT a standard DNS resolution; it is a configured SSH alias.
+
+2. The "Name or Service Not Known" Trap:
+   Running 'ssh -J bobby,ctrl1' from a remote client fails because the SSH Daemon (sshd) on Bobby does not read the SSH Client config (~/.ssh/config). It tries a raw DNS lookup for 'ctrl1', which fails.
+
+3. The Solution:
+   - Execute Ansible from Bobby directly.
+   - Or, use the fully qualified internal hostnames (e.g., ctrl1.node) if the network allows.
+   - Use SSH Agent Forwarding (-A) to pass keys through the chain without storing them on jump hosts.
+
+## Target VLAN
+- Target VMs (like forger2) reside on the 1173 VLAN.
+- Accessible via: ctrl1 (10.2.16.11)

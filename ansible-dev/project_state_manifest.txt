@@ -1,0 +1,42 @@
+# PSTAT ANSIBLE PROJECT STATE MANIFEST
+# Use this file as the primary entry point to restore session context.
+
+## 1. CORE ARCHITECTURAL DOCUMENTS
+The following files contain the strategic and technical blueprint:
+- ansible_architecture_plan.txt: The "Layer Cake" design, role mappings, and harvest list.
+- ansible_agent_context.txt: Internal AI logic, goals, and "North Star" principles.
+- network_topology.txt: The specific multi-hop SSH chain (Flanker -> DLR -> Bobby -> UFO-Race -> Ctrl1 -> VM).
+- decision_log.md: Record of technical decisions and rationales to prevent decision drift.
+- long_term_vision.md: Roadmap for GitOps, AWX automation, and Harvester integration.
+- dev_journal.txt: Record of "hard-won" lessons and traps encountered during setup.
+
+## 2. OPERATIONAL TOOLING
+- verification_script.sh: The bash script used to verify the baseline on target VMs.
+- kinji_pstat.yml: The finalized cloud-init configuration for AlmaLinux 9.
+
+## 3. CURRENT PROGRESS & STATE
+- Session Summary: See 'session_summary.txt' for the high-level status.
+- Target VM: 'forger5' (AlmaLinux 9, Harvester VM).
+- Local Dev Environment: Fulcrum (M3 MacBook Air) $\rightarrow$ Flanker $\rightarrow$ Bobby.
+- Current Pipeline: 
+    Local Edit (on Fulcrum/Flanker) $\rightarrow$ SSHFS Mount to Bobby ($\sim$/kinji/ansible) $\rightarrow$ Execution on 'Bobby' $\rightarrow$ Jump to 'ctrl1' $\rightarrow$ Target VM.
+- Completed: 
+    - Cloud-init baseline verified.
+    - Layer 1 (System Base) fully implemented: OS Updates, Repos, Base Tools, Core Users, NTP.
+    - Layer 2 (The Shield) fully implemented: Zone-based Firewall and Fail2Ban.
+- Pending: 
+    - Layer 3 (Compliance): Optional CIS/CUI Hardening.
+    - Layer 4 (Infrastructure): Monitoring, Logging, Backups.
+    - Layer 5 (Application Stack): Researcher tools and PSTAT apps.
+
+## 4. EXTERNAL SOURCE REPOS (FOR HARVESTING)
+- git.lsit: /Users/kinji/git.lsit/ansible-playbooks (Modern, Atomic tasks)
+- janus: /Users/kinji/janus/ansible (Legacy, PSTAT-specific roles and logic)
+
+## 5. RESTORATION PROCEDURE FOR AI AGENT
+If context is lost, the agent should:
+1. Read this manifest.
+2. Read 'ansible_agent_context.txt' to restore the architectural mindset.
+3. Read 'ansible_architecture_plan.txt' to understand the lapped structure.
+4. Read 'network_topology.txt' to understand the connectivity constraints.
+5. Read 'session_summary.txt' to identify the current a-point in the project.

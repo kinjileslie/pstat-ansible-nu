@@ -1,0 +1,17 @@
+---
+pstat_base_packages:
+  - net-tools
+  - tree
+  - bind-utils
+  - wget
+  - curl
+  - git
+  - lsof
+  - lshw
+  - yum-utils
+  - lsscsi
+  - tcpdump
+  - nmap
+  - rsync
+  - vim-enhanced
+  - parted

@@ -1,0 +1,32 @@
+---
+- name: Ensure firewalld is running
+  ansible.builtin.systemd:
+    name: firewalld
+    state: started
+    enabled: yes
+
+- name: Create IP sets from templates
+  ansible.builtin.template:
+    src: ipset.xml.j2
+    dest: "/etc/firewalld/ipsets/{{ item.name }}.xml"
+  loop: "{{ pstat_ipsets }}"
+
+- name: Ensure zones exist
+  ansible.posix.firewalld:
+    zone: "{{ item }}"
+    state: present
+    permanent: yes
+  loop: "{{ pstat_zones.keys() | list }}"
+
+- name: Configure Zone Sources
+  ansible.builtin.shell: "firewall-cmd --permanent --zone={{ item.key }} --add-source={{ source }}"
+  loop: "{{ pstat_zones | dict2items }}"
+  loop_control:
+    loop_var: item
+  # Since Ansible doesn't support nested loops in a single task, 
+  # we use a loop over the dict, and a Jinja2 loop inside the shell command 
+  # or a simple loop over a flattened list. 
+  # I'll use the 'shell' approach with a jinja loop for the sources to be bulletproof.
+  # Actually, the cleanest way is to flatten the list in a variable.
+  with_items: [] # Placeholder
+  # I will rewrite this using a different approach below.

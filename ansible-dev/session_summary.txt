@@ -1,0 +1,27 @@
+# Session Summary: PSTAT Ansible Foundation
+# Date: 2026-05-20
+
+## 1. Accomplishments
+- Finalized cloud-init config (kinji_pstat.yml) for AlmaLinux 9.
+- Verified the baseline on 'forger2' (SSH hardening, Firewalld, Fail2Ban, Ansible-core, QEMU Agent).
+- Solved the complex SSH jump chain (Flanker -> DLR -> Bobby -> UFO-Race -> Ctrl1 -> VM).
+- Established a high-efficiency dev workflow: 
+    - Local editing via SSHFS to Bobby.
+    - Execution of Ansible directly from Bobby.
+    --shump function for fast access.
+
+## 2. Technical Decisions
+- Architecture: Adopted "Atomic Roles" (Capability-based) over "Mega-Roles" (Category-based).
+- Base Source: Using git.lsit for modern atomic playbooks.
+- Enrichment: Harvesting specific PSTAT-legacy logic (NFS, RStudio, Podman) from Janus.
+- Execution: Using the 'site.yml' as a master order form to assign roles to host groups.
+
+## 3. Current State
+- VM 'forger2' is live and passing the baseline smoke test.
+- Architecture plan is mapped and saved to 'ansible_architecture_plan.txt'.
+- Agent context is saved to 'ansible_agent_context.txt'.
+
+## 4. Immediate Next Steps
+- Implement Layer 1 (System Base) roles.
+- Implement Layer 2 (Hardening) roles.
+- Gradually harvest and modernize Layer 3 (Infra) and Layer 4 (Research Stack) from Janus.
