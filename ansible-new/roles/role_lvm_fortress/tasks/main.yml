@@ -21,7 +21,7 @@
     - { name: 'lv_audit', size: "{{ pstat_lv_audit_size }}" }
     - { name: 'lv_log', size: "{{ pstat_lv_log_size }}" }
     - { name: 'lv_tmp', size: "{{ pstat_lv_tmp_size }}" }
-    - { name: 'lv_workhorse', size: "{{ pstat_lv_workhorse_size }}" }
+    - { name: 'lv_local', size: "{{ pstat_lv_local_size }}" }
 
 - name: Format LVs with XFS
   filesystem:
@@ -31,7 +31,7 @@
     - lv_audit
     - lv_log
     - lv_tmp
-    - lv_workhorse
+    - lv_local
 
 - name: Ensure mount directories exist
   file:
@@ -42,7 +42,7 @@
     - "{{ pstat_lv_audit_mount }}"
     - "{{ pstat_lv_log_mount }}"
     - "{{ pstat_lv_tmp_mount }}"
-    - "{{ pstat_lv_workhorse_mount }}"
+    - "{{ pstat_lv_local_mount }}"
 
 - name: Mount LVs and update fstab
   mount:
@@ -55,7 +55,7 @@
     - { lv: 'lv_audit', mount: "{{ pstat_lv_audit_mount }}", opts: "{{ pstat_lv_audit_options }}" }
     - { lv: 'lv_log', mount: "{{ pstat_lv_log_mount }}", opts: "{{ pstat_lv_log_options }}" }
     - { lv: 'lv_tmp', mount: "{{ pstat_lv_tmp_mount }}", opts: "{{ pstat_lv_tmp_options }}" }
-    - { lv: 'lv_workhorse', mount: "{{ pstat_lv_workhorse_mount }}", opts: "{{ pstat_lv_workhorse_options }}" }
+    - { lv: 'lv_local', mount: "{{ pstat_lv_local_mount }}", opts: "{{ pstat_lv_local_options }}" }
 
 - name: Audit role success
   ansible.builtin.include_role:

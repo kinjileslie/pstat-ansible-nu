@@ -30,10 +30,9 @@ The following files contain the strategic and technical blueprint:
 - Pending: 
     - Layer 2 Update: Implement `role_ssh_keys` and move SSH hardening from Cloud-Init to Ansible.
     - Layer 3 (Hardening): 
-        - [ ] Implement LVM-based CUI partitioning scheme.
-        - [ ] Implement "Workhorse" LVM volume for rootless Podman storage.
-        - [ ] Create `/etc/profile.d/` trigger script for container storage symlinks.
-        - [ ] Integrate xfs_quotas into base system configuration.
+        - [x] Implement LVM-based CUI partitioning scheme (v1.2 "Alta Model" with `/local` absorber).
+        - [ ] Implement the "Workhorse" symlink trigger for rootless Podman storage in `/local/container-storage`.
+        - [ ] Integrate xfs_quotas for `/local` monitoring and accounting.
         - [ ] Deploy `deploy_l3_compliance.yml` using `RedHatOfficial.rhel9_cui`.
     - Layer 4 (System Apps): Identity (LDAP/SSSD), Monitoring, Logging, Backups, NFS.
     - Layer 5 (User Apps): Pods, Scientific Stack, RStudio.

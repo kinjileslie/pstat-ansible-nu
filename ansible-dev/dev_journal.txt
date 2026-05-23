@@ -1,8 +1,6 @@
-# PSTAT Dev Journal
-# Record of "hard-won" lessons and traps encountered during setup.
-
-## [2026-05-21] The Cloud-Init Trap
-**Incident**: Attempted to implement SSH hardening (`PermitRootLogin prohibit-password` and `PasswordAuthentication no`) and LVM partitioning directly in the `cloud-config` (kinji_pstat.yml).
-**Result**: Locked out of both SSH and the Harvester Console. The console password was rejected because the hardening config explicitly forbade password logins for root.
-**Lesson**: Cloud-Init is for "Minimum Viable Boot" only. Any configuration that can "lock the door" (SSH, Firewall, Disk Partitions) must be moved to the Ansible pipeline. 
-**Impact**: Moving forward, Cloud-Init will only handle Identity, Base Tools, and Connectivity. Everything else is an Ansible task.
+## [2026-05-23] The LVM "Symmetry" and "Absorber" Pivot
+**Incident**: Discovered that L1 reported success despite packages missing because `pstat_base_packages` was accidentally deleted from `group_vars`. 
+**Resolution**: Restored a "Golden Copy" of network identities and base tool lists. Verified that "Absolute Zero" boot requires a strict L1 $\rightarrow$ L2 sequence.
+**Architectural Shift**: Moved from a "Workhorse" volume to an "Alta-inspired" `/local` absorber volume (70GB). This isolates all user-driven disk pressure (home dirs, containers, downloads) from the OS root partition.
+**LVM Lesson**: `vgremove` and `pvremove` can fail if `auditd` or other system services hold files open. The most efficient recovery path for LVM iterative testing is a Harvester "Replace Existing" snapshot restore.
+**Provisioning State**: `forger16` and `forger17` now have symmetrical L1/L2 baselines and L3 `/local` storage.

@@ -7,6 +7,15 @@
 ## 🎯 Objectives
 The goal of Layer 3 is to move from a generic VM disk layout to a structured, compliant, and resilient storage architecture using LVM on the secondary disk (`vdb`).
 
+### 🛠️ Current Status (as of 2026-05-23)
+- [x] **Symmetry Achieved**: L1 and L2 verified on `forger16` and `forger17`.
+- [x] **LVM Deployment**: `role_lvm_fortress` implemented and verified on `forger16`.
+- [x] **CUI Mounts**: `/var/log/audit` and `/tmp` isolation with `nodev,nosuid,noexec` active.
+- [x] **Snapshots**: Baseline recovery points established.
+
+### 🚧 Technical Debt & Future Refinement
+- **Naming Convention**: Current mount points (specifically `/var/lib/workhorse`) are placeholders. These must be renamed to professional standards (e.g., `/var/lib/container-storage`) before the project moves out of the "Alpha" phase.
+
 ### 1. Storage Architecture (The Three-Tier Model)
 We are shifting from a single-disk OS model to a multi-disk functional split:
 - **Disk 1 (`vda`)**: OS, `/boot`, `/boot/efi`.
@@ -41,5 +50,6 @@ Separate Logical Volumes (LVs) to ensure critical system functions are not disru
 5. **Compliance Validation**: Deploy `RedHatOfficial.rhel9_cui` to verify the layout meets security benchmarks.
 
 ## 🛡️ Risk Mitigation
-- **Snapshot-First**: No L3 changes are applied without a verified L2 snapshot.
+- **Snapshot-First**: No L3 changes are applied without a verified L2 snapshot. 
+- **Snapshot Recovery Warning**: Note that restoring to the L2 snapshot wipes all LVM partitioning on `vdb`. This is a "destructive" recovery point.
 - **Non-Destructive Testing**: Initial tests will focus on volume creation before moving to critical directory migration (e.g., moving `/var/log` to an LV).
