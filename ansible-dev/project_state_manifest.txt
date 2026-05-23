@@ -22,15 +22,18 @@ The following files contain the strategic and technical blueprint:
 - Current Pipeline: 
     Local Edit (on Fulcrum/Flanker) $\rightarrow$ SSHFS Mount to Bobby ($\sim$/kinji/ansible) $\rightarrow$ Execution on 'Bobby' $\rightarrow$ Jump to 'ctrl1' $\rightarrow$ Target VM.
 - Completed: 
-    - Cloud-init baseline verified.
+    - Cloud-init baseline verified (Lean Boot model).
+    - Provisioning Key (Bobby) verified as sole root-of-trust for instantiation.
+    - Console Access (Root/Support passwords) verified for emergency troubleshooting.
     - Layer 1 (System Base) fully implemented: OS Updates, Repos, Base Tools, Core Users, NTP.
     - Layer 2 (The Shield) fully implemented: Zone-based Firewall and Fail2Ban.
 - Pending: 
-    - Layer 3 (Hardening): Optional CIS/CUI Hardening.
-        - [ ] Implement LVM-based CUI partitioning scheme (Separate LVs for /tmp, /var, /var/log, /var/log/audit).
-        - [ ] Implement "Workhorse" LVM volume for rootless Podman storage to prevent /home exhaustion.
-        - [ ] Create `/etc/profile.d/` trigger script to automatically symlink rootless container storage from SSSD-created home dirs to the Workhorse volume.
-        - [ ] Integrate xfs_quotas into base system configuration for /home management.
+    - Layer 2 Update: Implement `role_ssh_keys` and move SSH hardening from Cloud-Init to Ansible.
+    - Layer 3 (Hardening): 
+        - [ ] Implement LVM-based CUI partitioning scheme.
+        - [ ] Implement "Workhorse" LVM volume for rootless Podman storage.
+        - [ ] Create `/etc/profile.d/` trigger script for container storage symlinks.
+        - [ ] Integrate xfs_quotas into base system configuration.
         - [ ] Deploy `deploy_l3_compliance.yml` using `RedHatOfficial.rhel9_cui`.
     - Layer 4 (System Apps): Identity (LDAP/SSSD), Monitoring, Logging, Backups, NFS.
     - Layer 5 (User Apps): Pods, Scientific Stack, RStudio.

@@ -5,6 +5,13 @@ This project transforms the PSTAT node configuration from legacy monolithic role
 
 ### 1. Baseline Deployment
 To bring a new node up to the current L1/L2 baseline:
+
+**Step A: Provisioning**
+1. Deploy a new VM in Harvester using the latest `kinji_pstat.yml` (Check the version header in the file to ensure you are using the current iteration, e.g., v1.1.0).
+2. Ensure a second volume is attached if LVM partitioning is required for the target environment.
+
+**Step B: Configuration**
+Run the full baseline integration test:
 ```bash
 # Run the full baseline integration test
 ansible-playbook -i inventories/pstat.ini test_l1_safe.yml --limit <hostname>

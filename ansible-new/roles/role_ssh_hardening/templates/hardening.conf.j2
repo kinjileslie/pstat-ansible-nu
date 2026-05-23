@@ -1,0 +1,20 @@
+# /etc/ssh/sshd_config.d/hardening.conf
+# PSTAT SSH Hardening Policy - Managed by Ansible
+
+# Root Access
+PermitRootLogin prohibit-password
+
+# Authentication
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+
+# Connection Security
+MaxAuthTries 3
+LoginGraceTime 60
+AllowAgentForwarding yes
+AllowTcpForwarding yes
+X11Forwarding no
+
+# Log Level
+LogLevel VERBOSE

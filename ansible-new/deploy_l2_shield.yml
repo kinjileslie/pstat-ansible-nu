@@ -5,3 +5,4 @@
   roles:
     - { role: role_firewall, tags: ['firewall'] }
     - { role: role_fail2ban, tags: ['fail2ban'] }
+    - { role: role_ssh_hardening, tags: ['ssh'] }

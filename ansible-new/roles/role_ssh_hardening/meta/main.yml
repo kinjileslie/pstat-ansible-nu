@@ -1,0 +1,10 @@
+---
+galaxy_info:
+  author: kinji
+  description: Applies SSH hardening policy to PSTAT nodes.
+  license: MIT
+  min_ansible_version: 2.10
+  platforms:
+    - name: AlmaLinux
+      versions: ['9']
+dependencies: []
