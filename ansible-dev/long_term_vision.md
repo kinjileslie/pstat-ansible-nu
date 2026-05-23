@@ -12,5 +12,10 @@
 Create an "Uber-Template" in AWX that handles the full lifecycle:
 1. **Provision**: Call Harvester API to create a new VM based on the hardened image.
 2. **Inventory**: Dynamically add the new VM's IP and hostname to the PSTAT inventory.
-3. **Deploy**: Execute the Layered Pipeline (L1 $\rightarrow$ L4) to fully configure the node.
+3. **Deploy**: Execute the Layered Pipeline (L1 $\rightarrow$ L5) to fully configure the node.
+    - L1: System Base
+    - L2: The Shield
+    - L3: The Fortress (LVM/Compliance - see `ansible-dev/l3_roadmap.md`)
+    - L4: System Apps
+    - L5: User Apps
 4. **Verify**: Run the verification scripts and report success/failure back to the operator.
