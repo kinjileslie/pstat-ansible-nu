@@ -1,0 +1,17 @@
+---
+# Layer 3 - The Fortress
+# This playbook implements the hardened storage architecture (LVM) and 
+# ensures the system is prepared for CUI compliance benchmarks.
+
+- name: Layer 3 - The Fortress (LVM & Hardening)
+  hosts: pstat
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Deploy LVM Fortress Storage
+      include_role:
+        name: role_lvm_fortress
+
+    # Note: Future tasks for RedHatOfficial.rhel9_cui will be added here
+    # once the storage layout is verified as operational.
