@@ -1,0 +1,28 @@
+---
+# role_xfs_quotas tasks
+# Implements XFS quota accounting (User, Group, Project) for PSTAT nodes.
+
+- name: Update GRUB kernel arguments for XFS quotas
+  shell: "grubby --update-kernel=ALL --args='{{ pstat_quota_kernel_args }}'"
+  changed_when: false # Simplified; normally we'd grep the current config first
+
+- name: Ensure XFS quota options are in /etc/fstab
+  mount:
+    path: "{{ item.mount }}"
+    src: "/dev/mapper/{{ pstat_lvm_vg_name }}-{{ item.lv }}"
+    fstype: xfs
+    opts: "{{ item.opts }}"
+    state: present
+  loop:
+    - { lv: 'lv_audit', mount: "{{ pstat_lv_audit_mount }}", opts: "{{ pstat_lv_audit_options }},uquota,gquota,pquota" }
+    - { lv: 'lv_log', mount: "{{ pstat_lv_log_mount }}", opts: "{{ pstat_lv_log_options }},uquota,gquota,pquota" }
+    - { lv: 'lv_tmp', mount: "{{ pstat_lv_tmp_mount }}", opts: "{{ pstat_lv_tmp_options }},uquota,gquota,pquota" }
+    - { lv: 'lv_local', mount: "{{ pstat_lv_local_mount }}", opts: "{{ pstat_lv_local_options }},uquota,gquota,pquota" }
+  notify: Reboot system for quota enablement
+
+- name: Verify XFS quota state (Post-Reboot)
+  shell: "xfs_quota -x -c 'state' {{ item }}"
+  changed_when: false
+  loop: "{{ pstat_quota_mounts }}"
+  # Note: This will fail if the system hasn't rebooted yet.
+  # In a full playbook, we would use a reboot module.

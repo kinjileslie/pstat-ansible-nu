@@ -59,3 +59,27 @@ pstat_monitoring_ips:
 pstat_ntp_servers:
   - 128.111.1.5
   - 128.111.1.6
+
+# 7. LVM Fortress Configuration
+pstat_lvm_disk: /dev/vdb
+pstat_lvm_vg_name: vg_fortress
+pstat_lv_audit_size: 5G
+pstat_lv_audit_mount: /var/log/audit
+pstat_lv_audit_options: "defaults,nodev,nosuid,noexec,nofail"
+pstat_lv_log_size: 10G
+pstat_lv_log_mount: /var/log
+pstat_lv_log_options: "defaults,nodev,nosuid,nofail"
+pstat_lv_tmp_size: 10G
+pstat_lv_tmp_mount: /tmp
+pstat_lv_tmp_options: "defaults,nodev,nosuid,noexec,nofail"
+pstat_lv_local_size: 70G
+pstat_lv_local_mount: /local
+pstat_lv_local_options: "defaults,nofail"
+
+# 8. XFS Quota Configuration
+pstat_quota_kernel_args: "rootflags=uquota,gquota,pquota"
+pstat_quota_mounts:
+  - /local
+  - /tmp
+  - /var/log
+  - /var/log/audit

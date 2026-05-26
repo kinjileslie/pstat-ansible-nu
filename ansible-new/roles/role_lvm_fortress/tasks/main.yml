@@ -47,7 +47,7 @@
 - name: Mount LVs and update fstab
   mount:
     path: "{{ item.mount }}"
-    src: "/dev/{{ pstat_lvm_vg_name }}/{{ item.lv }}"
+    src: "/dev/mapper/{{ pstat_lvm_vg_name }}-{{ item.lv }}"
     fstype: xfs
     opts: "{{ item.opts }}"
     state: mounted
@@ -56,6 +56,24 @@
     - { lv: 'lv_log', mount: "{{ pstat_lv_log_mount }}", opts: "{{ pstat_lv_log_options }}" }
     - { lv: 'lv_tmp', mount: "{{ pstat_lv_tmp_mount }}", opts: "{{ pstat_lv_tmp_options }}" }
     - { lv: 'lv_local', mount: "{{ pstat_lv_local_mount }}", opts: "{{ pstat_lv_local_options }}" }
+
+- name: Create systemd override directory for auditd
+  file:
+    path: /etc/systemd/system/auditd.service.d
+    state: directory
+    mode: '0755'
+
+- name: Add RequiresMountsFor to auditd service
+  copy:
+    dest: /etc/systemd/system/auditd.service.d/override.conf
+    content: |
+      [Unit]
+      RequiresMountsFor=/var/log/audit
+    mode: '0644'
+
+- name: Reload systemd to apply auditd override
+  systemd:
+    daemon_reload: yes
 
 - name: Audit role success
   ansible.builtin.include_role:

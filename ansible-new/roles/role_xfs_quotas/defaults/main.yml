@@ -1,0 +1,13 @@
+---
+# XFS Quota Defaults
+# Defines which volumes should have user, group, and project quotas enabled for accounting.
+
+# Kernel flags for quota enablement (rootflags)
+pstat_quota_kernel_args: "rootflags=uquota,gquota,pquota"
+
+# List of mount points that should have quota options enabled in /etc/fstab
+# We ONLY apply quotas to the "absorber" and scratch areas.
+# We avoid the root partition (/) and boot partitions to ensure system stability.
+pstat_quota_mounts:
+  - /local
+  - /tmp

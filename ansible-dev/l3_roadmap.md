@@ -9,9 +9,10 @@ The goal of Layer 3 is to move from a generic VM disk layout to a structured, co
 
 ### 🛠️ Current Status (as of 2026-05-23)
 - [x] **Symmetry Achieved**: L1 and L2 verified on `forger16` and `forger17`.
-- [x] **LVM Deployment**: `role_lvm_fortress` implemented and verified on `forger16`.
+- [x] **LVM Deployment**: `role_lvm_fortress` implemented and verified on `forger16` (v1.2 "Alta Model" with `/local` absorber).
 - [x] **CUI Mounts**: `/var/log/audit` and `/tmp` isolation with `nodev,nosuid,noexec` active.
-- [x] **Snapshots**: Baseline recovery points established.
+- [x] **Snapshots**: Baseline recovery points established for L2.
+- [ ] **Next Active Task**: Testing `role_xfs_quotas` on `forger16` to enable User/Group/Project accounting.
 
 ### 🚧 Technical Debt & Future Refinement
 - **Naming Convention**: Current mount points (specifically `/var/lib/workhorse`) are placeholders. These must be renamed to professional standards (e.g., `/var/lib/container-storage`) before the project moves out of the "Alpha" phase.
