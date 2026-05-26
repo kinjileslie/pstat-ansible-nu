@@ -1,0 +1,6 @@
+---
+# Ansible Galaxy requirements for PSTAT project
+# These roles are downloaded and then "vendored" into the roles/ directory
+# to ensure build consistency and auditability.
+
+- src: RedHatOfficial.rhel9_cui

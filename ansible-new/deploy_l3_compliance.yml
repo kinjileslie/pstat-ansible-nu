@@ -1,0 +1,27 @@
+---
+# Layer 3 - CUI Compliance Overlay
+# This playbook applies the Red Hat Official RHEL9 CUI hardening role.
+# It is an OPTIONAL overlay that should be run AFTER deploy_l3_fortress.yml.
+
+- name: Layer 3 - Apply CUI Hardening
+  hosts: pstat
+  become: yes
+  gather_facts: yes
+
+  vars:
+    # --- CUI Master Switches (from local testing on gammon/poisson) ---
+    # This acts as the master "ON" switch for the OpenSCAP logic
+    ansible_compliance_cleanup: true
+    
+    # These satisfy the 'when' conditions in the role's task files
+    enable_strategy: true
+    low_complexity: true
+    low_disruption: true
+    medium_severity: true
+    no_reboot_needed: true
+    
+    # This triggers the "High Level" STIG profile
+    rhel9_cui_stig_gui: true
+
+  roles:
+    - role: rhel9_cui
