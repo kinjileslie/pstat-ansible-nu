@@ -7,12 +7,13 @@
 ## 🎯 Objectives
 The goal of Layer 3 is to move from a generic VM disk layout to a structured, compliant, and resilient storage architecture using LVM on the secondary disk (`vdb`).
 
-### 🛠️ Current Status (as of 2026-05-23)
-- [x] **Symmetry Achieved**: L1 and L2 verified on `forger16` and `forger17`.
-- [x] **LVM Deployment**: `role_lvm_fortress` implemented and verified on `forger16` (v1.2 "Alta Model" with `/local` absorber).
-- [x] **CUI Mounts**: `/var/log/audit` and `/tmp` isolation with `nodev,nosuid,noexec` active.
-- [x] **Snapshots**: Baseline recovery points established for L2.
-- [ ] **Next Active Task**: Testing `role_xfs_quotas` on `forger16` to enable User/Group/Project accounting.
+### 🛠️ Current Status (as of 2026-05-26)
+- [x] **Symmetry Achieved**: L1 and L2 verified across the fleet.
+- [x] **LVM Deployment**: `role_lvm_fortress` implemented and verified on `forger16`, `forger19`, and `forger20` (v1.2 "Alta Model" with `/local` absorber).
+- [x] **Boot Stability**: Implemented `nofail` mount options and `systemd` overrides for `auditd` to prevent Emergency Mode boot-loops.
+- [x] **XFS Accounting**: `role_xfs_quotas` fully operational. User, Group, and Project quotas are active on `/local` and `/tmp` for storage observability.
+- [x] **Baseline Verified**: The full L1 $\rightarrow$ L2 $\rightarrow$ L3 pipeline is now reproducible on fresh VMs (verified on `forger20`).
+- [ ] **Next Active Task**: Transition to Layer 4 (System Apps), starting with LDAP/SSSD Identity and the `/local/home` pivot.
 
 ### 🚧 Technical Debt & Future Refinement
 - **Naming Convention**: Current mount points (specifically `/var/lib/workhorse`) are placeholders. These must be renamed to professional standards (e.g., `/var/lib/container-storage`) before the project moves out of the "Alpha" phase.

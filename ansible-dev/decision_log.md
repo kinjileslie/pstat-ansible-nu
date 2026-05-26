@@ -17,6 +17,14 @@
 **Implementation**: Use "Replace Existing" snapshot restoration in Harvester.
 **Lesson Learned**: LVM locks (especially `auditd`) can make `vgremove` fail. Restoring to a snapshot is the most efficient recovery path for LVM iterative testing.
 
+**Decision**: LVM Device Pathing.
+**Implementation**: Standardized on `/dev/mapper/vg_name-lv_name` instead of `/dev/vg_name/lv_name`.
+**Rationale**: The mapper path is more consistent across different kernel versions and avoids "No route to host" or mount failures during boot in AlmaLinux 9.
+
 **Decision**: XFS Quota Implementation (Accounting Mode).
-**Implementation**: Enable `uquota,gquota,pquota` via GRUB and FSTAB.
-**Rationale**: Provide visibility into storage hogs (UID/Project level) without imposing hard limits initially. This allows for auditing and "case-by-case" limit setting in the future.
+**Implementation**: Enable `uquota,gquota,pquota` via `rootflags` in GRUB and `fstab` mount options.
+**Rationale**: Provide full visibility into storage usage (User, Group, and Project) without imposing hard limits that could break researcher workflows.
+
+**Decision**: Boot-Loop Prevention (L3).
+**Implementation**: Added `nofail` to all LVM mount options and created a `systemd` override for `auditd.service` (`RequiresMountsFor=/var/log/audit`).
+**Rationale**: Prevents the system from dropping into Emergency Maintenance mode if a secondary volume fails to mount, ensuring SSH access is always maintained.

@@ -27,14 +27,9 @@ The following files contain the strategic and technical blueprint:
     - Console Access (Root/Support passwords) verified for emergency troubleshooting.
     - Layer 1 (System Base) fully implemented: OS Updates, Repos, Base Tools, Core Users, NTP.
     - Layer 2 (The Shield) fully implemented: Zone-based Firewall and Fail2Ban.
+    - Layer 3 (The Fortress) fully implemented: LVM "Alta Model" layout, `nofail` boot safety, and XFS User/Group/Project accounting.
 - Pending: 
-    - Layer 2 Update: Implement `role_ssh_keys` and move SSH hardening from Cloud-Init to Ansible.
-    - Layer 3 (Hardening): 
-        - [x] Implement LVM-based CUI partitioning scheme (v1.2 "Alta Model" with `/local` absorber).
-        - [ ] Implement the "Workhorse" symlink trigger for rootless Podman storage in `/local/container-storage`.
-        - [ ] Integrate xfs_quotas for `/local` monitoring and accounting.
-        - [ ] Deploy `deploy_l3_compliance.yml` using `RedHatOfficial.rhel9_cui`.
-    - Layer 4 (System Apps): Identity (LDAP/SSSD), Monitoring, Logging, Backups, NFS.
+    - Layer 4 (System Apps): Identity (LDAP/SSSD), Moving Home Directories to `/local/home`, Monitoring, Logging, Backups, NFS.
     - Layer 5 (User Apps): Pods, Scientific Stack, RStudio.
 
 ## 4. EXTERNAL SOURCE REPOS (FOR HARVESTING)
