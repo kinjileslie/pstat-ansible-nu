@@ -1,57 +1,51 @@
 # Layer 3: The Fortress - LVM & Compliance Roadmap
 
 ## 📌 Current State
-- **Baseline Verified**: Nodes `forger16` and `forger17` have successfully passed L1 (System Base) and L2 (The Shield) using the "Absolute Zero" boot strategy.
-- **Checkpoint**: Snapshots of `forger16` and `forger17` have been taken. These serve as the "Known Good" recovery points for L1/L2.
+- **Baseline Verified**: Nodes `forger16`, `forger19`, and `forger20` have successfully passed L1, L2, and L3 mandatory foundations.
+- **Symmetry**: The L1 $\rightarrow$ L2 $\rightarrow$ L3 pipeline is now fully reproducible on fresh VMs.
+- **Checkpoint**: L2 snapshots are established as the "Known Good" recovery points before L3 application.
 
 ## 🎯 Objectives
 The goal of Layer 3 is to move from a generic VM disk layout to a structured, compliant, and resilient storage architecture using LVM on the secondary disk (`vdb`).
 
 ### 🛠️ Current Status (as of 2026-05-26)
 - [x] **Symmetry Achieved**: L1 and L2 verified across the fleet.
-- [x] **LVM Deployment**: `role_lvm_fortress` implemented and verified on `forger16`, `forger19`, and `forger20` (v1.2 "Alta Model" with `/local` absorber).
+- [x] **LVM Deployment**: `role_lvm_fortress` implemented and verified (v1.2 "Alta Model" with `/local` absorber).
 - [x] **Boot Stability**: Implemented `nofail` mount options and `systemd` overrides for `auditd` to prevent Emergency Mode boot-loops.
-- [x] **XFS Accounting**: `role_xfs_quotas` fully operational. User, Group, and Project quotas are active on `/local` and `/tmp` for storage observability.
-- [x] **Baseline Verified**: The full L1 $\rightarrow$ L2 $\rightarrow$ L3 pipeline is now reproducible on fresh VMs (verified on `forger20`).
-- [ ] **Next Active Task**: Transition to Layer 4 (System Apps), starting with LDAP/SSSD Identity and the `/local/home` pivot.
+- [x] **XFS Accounting**: `role_xfs_quotas` fully operational (uquota, gquota) on `/local` and `/tmp`.
+- [x] **Path Standardization**: Standardized on `/dev/mapper/` device paths for LVM to ensure mount reliability.
+- [ ] **Compliance Overlay**: Deploy `RedHatOfficial.rhel9_cui` as an optional "Compliance Toggle" for CUI-specific nodes.
 
-### 🚧 Technical Debt & Future Refinement
-- **Naming Convention**: Current mount points (specifically `/var/lib/workhorse`) are placeholders. These must be renamed to professional standards (e.g., `/var/lib/container-storage`) before the project moves out of the "Alpha" phase.
+### 🚧 Architectural Decisions
+- **The "Absorber" Model**: Shifted from a specific "Workhorse" volume to a generalized `/local` volume. All user-driven data (homes, containers, scratch) is consolidated here to protect the root partition.
+- **Foundation vs. Policy**: 
+    - **Foundation (Mandatory)**: LVM layout and XFS Quotas.
+    - **Policy (Optional)**: CUI Hardening. This allows for a "Standard" vs "Hardened" node build.
+- **Boot Safety**: Use of `nofail` in `fstab` ensures the system always boots to a reachable SSH state, even if a secondary volume fails.
 
 ### 1. Storage Architecture (The Three-Tier Model)
-We are shifting from a single-disk OS model to a multi-disk functional split:
 - **Disk 1 (`vda`)**: OS, `/boot`, `/boot/efi`.
 - **Disk 2 (`vdb`)**: The "Fortress" LVM Volume Group.
 - **Disk 3**: (Future) Network-attached storage/NFS/Ceph.
 
 ### 2. The LVM "Fortress" Layout (`vdb`)
-We will implement a Volume Group (VG) on `vdb` to provide isolation and prevent system-wide failures due to disk exhaustion (Containment).
-
 #### A. Compliance & Security LVs
-Separate Logical Volumes (LVs) to ensure critical system functions are not disrupted by log floods or temp file explosions:
 - `/var/log/audit`: Dedicated space for audit logs.
 - `/var/log`: General system logs.
 - `/tmp`: Temporary filesystem isolation.
 
-#### B. The "Workhorse" Volume
-- **Purpose**: Dedicated storage for rootless Podman containers.
-- **Implementation**: A large LV mounted to a specific path, with a trigger script in `/etc/profile.d/` to symlink `~/.local/share/containers` for SSSD/LDAP users.
-- **Goal**: Prevent researcher container images from exhausting `/home` or root (`/`) space.
-
-#### C. Flex Space
-- A portion of `vdb` will remain unallocated within the VG to allow for dynamic expansion of LVs without redeploying the VM.
+#### B. The `/local` Absorber
+- **Purpose**: The primary landing zone for all non-OS data.
+- **Implementation**: A large LV (70GB) that hosts `/local/home` and container storage.
+- **Goal**: Prevent disk exhaustion on the root partition.
 
 ### 3. Implementation Path
-1. **Disk Preparation**: Use `parted` to initialize `vdb`.
-2. **LVM Orchestration**:
-    - Create Volume Group (VG).
-    - Create Logical Volumes (LVs) for Audit, Logs, Tmp, and Workhorse.
-    - Format with XFS (utilizing `xfs_quotas` for `/home` management).
-3. **Mounting & Persistence**: Configure `/etc/fstab` and ensure mounts are active.
-4. **The Symlink Trigger**: Deploy the `/etc/profile.d/` script to automate container storage redirection.
-5. **Compliance Validation**: Deploy `RedHatOfficial.rhel9_cui` to verify the layout meets security benchmarks.
+1. **LVM Orchestration**: Create VG and LVs (Audit, Logs, Tmp, Local).
+2. **Stability Layer**: Apply `nofail` and `systemd` overrides for `auditd`.
+3. **Accounting Layer**: Enable kernel `rootflags` and apply XFS quotas to `/local` and `/tmp`.
+4. **Compliance Overlay**: (Optional) Run `RedHatOfficial.rhel9_cui` as a final hardening step.
 
 ## 🛡️ Risk Mitigation
 - **Snapshot-First**: No L3 changes are applied without a verified L2 snapshot. 
-- **Snapshot Recovery Warning**: Note that restoring to the L2 snapshot wipes all LVM partitioning on `vdb`. This is a "destructive" recovery point.
-- **Non-Destructive Testing**: Initial tests will focus on volume creation before moving to critical directory migration (e.g., moving `/var/log` to an LV).
+- **Snapshot Recovery Warning**: Restoring to the L2 snapshot wipes all LVM partitioning on `vdb`.
+- **The `nofail` Safety Net**: All LVM mounts use `nofail` to ensure the node remains reachable via SSH during troubleshooting.
