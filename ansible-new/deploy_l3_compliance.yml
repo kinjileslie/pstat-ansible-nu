@@ -24,4 +24,4 @@
     rhel9_cui_stig_gui: true
 
   roles:
-    - role: rhel9_cui
+    - role: RedHatOfficial.rhel9_cui
