@@ -81,4 +81,6 @@ To maintain system stability and support the "Layer Cake" architecture, the foll
     - Isolate `/var/tmp` via LVM to prevent root partition exhaustion (CUI requirement).
     - Execute the "Home Pivot" to `/local/home` to isolate user data from OS.
     - Implement legally compliant "California-grade" MOTD (Privacy/Monitoring warnings).
-    - Implement a "Dynamic Announcement" system (e.g., `deploy_announcement.yml`) to push timely maintenance alerts to all nodes.
+    - Implement a "Dynamic Announcement" system: 
+        - Use `/etc/issue` as the static legal "No Trespassing" sign.
+        - Use `/etc/motd` as a dynamic bulletin board for maintenance alerts, managed via a dedicated `deploy_announcement.yml` playbook.
