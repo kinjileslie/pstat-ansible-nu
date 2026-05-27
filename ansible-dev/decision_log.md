@@ -28,3 +28,43 @@
 **Decision**: Boot-Loop Prevention (L3).
 **Implementation**: Added `nofail` to all LVM mount options and created a `systemd` override for `auditd.service` (`RequiresMountsFor=/var/log/audit`).
 **Rationale**: Prevents the system from dropping into Emergency Maintenance mode if a secondary volume fails to mount, ensuring SSH access is always maintained.
+
+## 2026-05-26: Decoupling Storage from Compliance and Redefining Layout
+
+**Context**: The CUI compliance role was found to be coupled with the assumption of specific partitions. To provide flexibility for "semi-hardened" VMs and avoid forced partitioning, the storage and policy layers were decoupled.
+
+**Decisions**:
+1. **Decoupling**: LVM partitioning () is now a separate prerequisite from CUI hardening (). The hardening role now adapts to existing infrastructure rather than requiring it.
+2. **CUI-Complete Layout**: Revised the  partition map to satisfy all CUI isolation requirements:
+    - `/var/log/audit`: 5GB
+    - `/var/log`: 10GB
+    - `/tmp`: 10GB
+    - `/var/tmp`: 5GB (New - closes CUI gap)
+    - `/home`: 20GB (New - closes CUI gap / provides local fallback for NFS)
+    - `/local`: 50GB (Adjusted - remains the "absorber" for user data)
+3. **Identity Strategy**: Established the "Hybrid Home" model:
+    - Static legal banner in `/etc/issue`.
+    - Dynamic announcement board in `/etc/motd`.
+    - NFS mount from `kingslanding.pstat` to `/home`, overlaying the local LVM partition.
+
+**Impact**: Increases deployment flexibility and closes security audit gaps while maintaining the "Symmetry" goal.
+
+## 2026-05-26: Decoupling Storage from Compliance and Redefining Layout
+
+**Context**: The CUI compliance role was found to be coupled with the assumption of specific partitions. To provide flexibility for "semi-hardened" VMs and avoid forced partitioning, the storage and policy layers were decoupled.
+
+**Decisions**:
+1. **Decoupling**: LVM partitioning (`role_lvm_fortress`) is now a separate prerequisite from CUI hardening (`deploy_l3_compliance.yml`). The hardening role now adapts to existing infrastructure rather than requiring it.
+2. **CUI-Complete Layout**: Revised the `vdb` partition map to satisfy all CUI isolation requirements:
+    - `/var/log/audit`: 5GB
+    - `/var/log`: 10GB
+    - `/tmp`: 10GB
+    - `/var/tmp`: 5GB (New - closes CUI gap)
+    - `/home`: 20GB (New - closes CUI gap / provides local fallback for NFS)
+    - `/local`: 50GB (Adjusted - remains the "absorber" for user data)
+3. **Identity Strategy**: Established the "Hybrid Home" model:
+    - Static legal banner in `/etc/issue`.
+    - Dynamic announcement board in `/etc/motd`.
+    - NFS mount from `kingslanding.pstat` to `/home`, overlaying the local LVM partition.
+
+**Impact**: Increases deployment flexibility and closes security audit gaps while maintaining the "Symmetry" goal.

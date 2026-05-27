@@ -22,9 +22,19 @@ pstat_lv_tmp_size: 10G
 pstat_lv_tmp_mount: /tmp
 pstat_lv_tmp_options: "defaults,nodev,nosuid,noexec"
 
+# Var Temp: CUI Requirement for persistent temp isolation
+pstat_lv_vartmp_size: 5G
+pstat_lv_vartmp_mount: /var/tmp
+pstat_lv_vartmp_options: "defaults,nodev,nosuid,noexec"
+
+# Home: Local fallback for NFS / CUI Isolation
+pstat_lv_home_size: 20G
+pstat_lv_home_mount: /home
+pstat_lv_home_options: "defaults,nodev"
+
 # Local: The "Absorber" for user data and containers
-pstat_lv_local_size: 70G
+pstat_lv_local_size: 50G
 pstat_lv_local_mount: /local
 pstat_lv_local_options: "defaults"
 
-# Note: We leave ~20GB unallocated for future expansion.
+# Note: We leave small buffer for LVM metadata.

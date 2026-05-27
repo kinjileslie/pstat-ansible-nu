@@ -38,7 +38,11 @@ To check if a node has been correctly provisioned and see the audit trail:
 ### 3. Layer 3, 4, and 5 (Advanced Deployment)
 These layers follow an **Explicit Orchestration** model. Instead of hidden booleans, we use tags to specify exactly which "Capabilities" to install.
 
-- **L3 (Hardening)**: Optional high-security benchmarks. See [L3 Roadmap](../ansible-dev/l3_roadmap.md) for the LVM and storage strategy.
+- **Layer 3 (Hardening)**: Optional high-security benchmarks. Now split into two decoupled components:
+    - **Storage Foundation**: `deploy_l3_fortress.yml` (LVM partitioning) and `deploy_l3_quotas.yml` (XFS accounting).
+    - **Security Policy**: `deploy_l3_compliance.yml` (CUI/STIG hardening via `RedHatOfficial.rhel9_cui`).
+    - *Note*: Policy can be applied without the Foundation for "semi-hardened" nodes, though compliance scores will be lower and disk risk higher.
+
 - **L4 (System Apps)**: Core infrastructure (e.g., PMM, Splunk, NFS).
 - **L5 (User Apps)**: Researcher tools (e.g., RStudio, Podman).
 
@@ -78,9 +82,11 @@ To maintain system stability and support the "Layer Cake" architecture, the foll
 - "Medium" pass showed zero additional changes.
 - **Open Items**:
     - Validate the overlap between low and medium complexity controls in the RHEL9 CUI role.
+    - Update `role_lvm_fortress` to the "CUI-Complete" layout (add `/var/tmp` and `/home`).
     - Isolate `/var/tmp` via LVM to prevent root partition exhaustion (CUI requirement).
     - Execute the "Home Pivot" to `/local/home` to isolate user data from OS.
     - Implement legally compliant "California-grade" MOTD (Privacy/Monitoring warnings).
     - Implement a "Dynamic Announcement" system: 
         - Use `/etc/issue` as the static legal "No Trespassing" sign.
         - Use `/etc/motd` as a dynamic bulletin board for maintenance alerts, managed via a dedicated `deploy_announcement.yml` playbook.
+    - [ON HOLD] Layer 4 (Plumbing): Identity (LDAP/SSSD) and Monitoring.
