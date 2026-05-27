@@ -66,6 +66,15 @@ Compliance is managed as an optional overlay. Use `deploy_l3_compliance.yml` wit
 | **Standard** | `low_complexity,medium_complexity,no_reboot_needed` | Tightens filesystem mounts and SSH timeouts. |
 | **Strict** | `low_complexity,medium_complexity,high_complexity` | Full audit enforcement and restrictive network policies. |
 
+### ⚙️ Architecture: Policy vs. Implementation (The "Symmetry" Model)
+To maintain a balance between standard baseline and node-specific needs, we use a split-variable strategy for LVM and Hardening:
+
+- **Role Defaults (`roles/*/defaults/main.yml`)**: Define the **Implementation Baseline**. (e.g., "Standard volume sizes: `/home` is 20GB, `/tmp` is 10GB"). This is the "blueprint."
+- **Group Variables (`group_vars/pstat.yml`)**: Define the **Fleet Policy**. (e.g., "All volumes must use the `nofail` mount option"). This is the "governance."
+- **Host Variables (`host_vars/*.yml`)**: Define **Exceptions**. (e.g., "This specific node needs 100GB for `/home`").
+
+**Why?** This allows us to change the fleet-wide policy (e.g., updating mount options) in one place without touching the underlying structural blueprints of the roles.
+
 ### ⚠️ Operational Exceptions
 To maintain system stability and support the "Layer Cake" architecture, the following CUI controls are explicitly disabled:
 
