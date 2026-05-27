@@ -1,0 +1,17 @@
+---
+- name: Create debug admin user
+  user:
+    name: "{{ debug_user }}"
+    password: "{{ debug_password | password_hash('sha512') }}"
+    shell: /bin/bash
+    state: present
+
+- name: Grant debug admin sudo privileges
+  copy:
+    content: "{{ debug_user }} ALL=(ALL) NOPASSWD:ALL"
+    dest: "/etc/sudoers.d/{{ debug_user }}"
+    mode: '0440'
+
+- name: Ensure debug user is not locked
+  shell: "passwd -u {{ debug_user }}"
+  changed_when: false

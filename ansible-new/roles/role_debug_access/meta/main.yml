@@ -1,0 +1,10 @@
+---
+galaxy_info:
+  author: kinji
+  description: Emergency break-glass access for development VMs.
+  company: UCSB PSTAT
+  license: MIT
+  min_ansible_version: "2.10"
+  platforms:
+    - name: EL9
+dependencies: []

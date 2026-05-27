@@ -1,0 +1,6 @@
+---
+- name: Emergency Debug Access
+  hosts: pstat
+  become: yes
+  roles:
+    - role: role_debug_access

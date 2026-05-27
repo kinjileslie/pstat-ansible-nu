@@ -33,7 +33,7 @@ pstat_lv_home_mount: /home
 pstat_lv_home_options: "defaults,nodev"
 
 # Local: The "Absorber" for user data and containers
-pstat_lv_local_size: 50G
+pstat_lv_local_size: 49G
 pstat_lv_local_mount: /local
 pstat_lv_local_options: "defaults"
 

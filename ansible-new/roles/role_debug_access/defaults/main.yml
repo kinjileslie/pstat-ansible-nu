@@ -1,0 +1,4 @@
+---
+# Defaults for debug_access
+debug_user: "debug_admin"
+debug_password: "DebugPassword123!" # Change this for production or use a vault

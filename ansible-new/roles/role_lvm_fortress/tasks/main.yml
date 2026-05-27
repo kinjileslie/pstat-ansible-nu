@@ -65,6 +65,14 @@
     - { lv: 'lv_home', mount: "{{ pstat_lv_home_mount }}", opts: "{{ pstat_lv_home_options }}" }
     - { lv: 'lv_local', mount: "{{ pstat_lv_local_mount }}", opts: "{{ pstat_lv_local_options }}" }
 
+- name: Restore home directory for the deployment user
+  file:
+    path: /home/almalinux
+    state: directory
+    owner: almalinux
+    group: almalinux
+    mode: '0700'
+
 - name: Create systemd override directory for auditd
   file:
     path: /etc/systemd/system/auditd.service.d
@@ -82,6 +90,12 @@
 - name: Reload systemd to apply auditd override
   systemd:
     daemon_reload: yes
+
+- name: Ensure SSH access is restored after LVM mount
+  ansible.builtin.include_role:
+    name: role_provision_access
+  vars:
+    audit_role_name: "role_provision_access_post_lvm"
 
 - name: Audit role success
   ansible.builtin.include_role:
