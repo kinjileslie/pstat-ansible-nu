@@ -1,0 +1,5 @@
+---
+# Role Identity Defaults
+# These can be overridden in group_vars or host_vars
+system_banner_text: "UCSB - PSTAT Department / Official use only - Any and all activity may be monitored."
+system_motd_text: "Welcome to {{ ansible_hostname }}. This is a PSTAT managed node. Please report any issues to the system administrator."

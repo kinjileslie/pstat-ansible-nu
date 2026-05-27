@@ -20,7 +20,9 @@ The deployment is structured as a series of sequential layers. Each layer must b
 
 - Layer 3: Hardening (The Fortress)
   - Goal: Apply high-security benchmarks (CIS/CUI).
-  - Execution: Optional/Selective via standalone policy playbook.
+  - Execution: Optional/Selective via standalone policy playbook. (Current State: LVM "Alta Model" and CUI Baseline ~84% applied).
+  - Note: Operational exceptions made for subscription-manager, usbguard, fapolicyd, and authselect/pam_faillock to preserve stability and Layer 4 compatibility.
+
 
 - Layer 4: System Apps (The Plumbing)
   - Goal: Integrating the server into the PSTAT management ecosystem.

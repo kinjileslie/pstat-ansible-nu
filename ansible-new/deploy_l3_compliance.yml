@@ -1,7 +1,21 @@
 ---
-# Layer 3 - CUI Compliance Overlay
+# ==============================================================================
+# LAYER 3 - CUI COMPLIANCE OVERLAY
+# ==============================================================================
 # This playbook applies the Red Hat Official RHEL9 CUI hardening role.
 # It is an OPTIONAL overlay that should be run AFTER deploy_l3_fortress.yml.
+#
+# EXECUTION MENU (Tags):
+# ------------------------------------------------------------------------------
+# Tier 1 (Baseline): --tags "low_complexity,no_reboot_needed"
+#   - Low risk, basic security tools and system baseline.
+#
+# Tier 2 (Standard): --tags "low_complexity,medium_complexity,no_reboot_needed"
+#   - Moderate risk, tightens filesystem mounts and SSH timeouts.
+#
+# Tier 3 (Strict):    --tags "low_complexity,medium_complexity,high_complexity"
+#   - High risk, full audit enforcement and restrictive network policies.
+# ==============================================================================
 
 - name: Layer 3 - Apply CUI Hardening
   hosts: pstat
@@ -34,6 +48,36 @@
     # --- Custom Overrides ---
     # Set dnf-automatic to only apply security updates, not all updates
     dnf_automatic_upgrade_type: security
+
+    # 1. Alma/VM Incompatibility Neutralization
+    package_subscription_manager_installed: false
+    package_usbguard_installed: false
+    package_fapolicyd_installed: false
+    service_usbguard_enabled: false
+    service_fapolicyd_enabled: false
+
+    # 2. SELinux Stability (Permissive mode)
+    var_selinux_state: "permissive"
+    selinux_state: true
+
+    # 3. Storage Fortress Protection (Protect /var/log/audit fstab)
+    mount_option_var_log_audit_nodev: false
+    mount_option_var_log_audit_noexec: false
+    mount_option_var_log_audit_nosuid: false
+
+    # 4. SSH Hardening Centralization (Defer to role_ssh_hardening)
+    sshd_disable_host_auth: false
+    sshd_disable_empty_passwords: false
+    sshd_disable_gssapi_auth: false
+    sshd_disable_kerb_auth: false
+    sshd_disable_root_login: false
+    sshd_enable_warning_banner: false
+    sshd_rekey_limit: false
+
+    # Legacy overrides for backward compatibility
+    rhel9_cui_subscription_manager_enabled: false
+    rhel9_cui_usbguard_enabled: false
+    rhel9_cui_fapolicyd_enabled: false
 
   roles:
     - role: RedHatOfficial.rhel9_cui

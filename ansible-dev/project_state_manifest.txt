@@ -27,7 +27,9 @@ The following files contain the strategic and technical blueprint:
     - Console Access (Root/Support passwords) verified for emergency troubleshooting.
     - Layer 1 (System Base) fully implemented: OS Updates, Repos, Base Tools, Core Users, NTP.
     - Layer 2 (The Shield) fully implemented: Zone-based Firewall and Fail2Ban.
-    - Layer 3 (The Fortress) fully implemented: LVM "Alta Model" layout, `nofail` boot safety, and XFS User/Group/Project accounting.
+    - Layer 3 (The Fortress & Compliance) fully implemented: 
+        - LVM "Alta Model" layout, `nofail` boot safety, and XFS User/Group/Project accounting.
+        - CUI Compliance overlay implemented using RedHatOfficial.rhel9_cui (Tier 1/2 baseline reached ~84%).
 - Pending: 
     - Layer 4 (System Apps): Identity (LDAP/SSSD), Moving Home Directories to `/local/home`, Monitoring, Logging, Backups, NFS.
     - Layer 5 (User Apps): Pods, Scientific Stack, RStudio.

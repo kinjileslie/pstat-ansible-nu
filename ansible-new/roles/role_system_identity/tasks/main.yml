@@ -1,0 +1,14 @@
+---
+- name: Deploy System Banner (/etc/issue)
+  ansible.builtin.template:
+    src: issue.j2
+    dest: /etc/issue
+    mode: '0644'
+  tags: [identity, banner]
+
+- name: Deploy Message of the Day (/etc/motd)
+  ansible.builtin.template:
+    src: motd.j2
+    dest: /etc/motd
+    mode: '0644'
+  tags: [identity, motd]

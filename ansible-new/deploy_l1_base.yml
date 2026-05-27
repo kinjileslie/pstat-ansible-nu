@@ -8,4 +8,5 @@
     - { role: role_repos, tags: ['repos'] }
     - { role: role_base_tools, tags: ['tools'] }
     - { role: role_core_users, tags: ['users'] }
+    - { role: role_system_identity, tags: ['identity'] }
     - { role: role_ssh_keys, tags: ['ssh_keys'] }

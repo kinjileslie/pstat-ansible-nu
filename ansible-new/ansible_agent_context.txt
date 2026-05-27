@@ -1,0 +1,23 @@
+# PSTAT Ansible Agent Context
+
+## Project Goal
+Modernize Ansible configuration for PSTAT nodes (AlmaLinux 9) using a "Layer Cake" architecture (Atomic Roles -> Explicit Playbooks -> Flat Variables).
+
+## Layer 3 Compliance (CUI)
+Compliance is handled via the `RedHatOfficial.rhel9_cui` role.
+
+### Tag Mappings
+To ensure consistency, always use these tag combinations for compliance levels:
+- **Tier 1 (Baseline)**: `low_complexity,no_reboot_needed`
+- **Tier 2 (Standard)**: `low_complexity,medium_complexity,no_reboot_needed`
+- **Tier 3 (Strict)**: `low_complexity,medium_complexity,high_complexity`
+
+### Key Decisions
+- **Root Password**: For CUI compliance (rescue shell access), a random 32-character password is generated and set during the `pre_tasks` of `deploy_l3_compliance.yml`. This is not stored (Immutable Infrastructure approach).
+- **DNF Automatic**: Configured to `security` updates only to prevent accidental version jumps.
+- **Verification**: Use `oscap` locally on the target node to generate HTML reports.
+
+## Storage Strategy
+- **Alta Model**: `/local` (70GB) on `vdb` as a primary absorber.
+- **Surgical LVM**: Use `lvg` and `lvol` to avoid external collection dependencies.
+- **XFS Quotas**: Implement "Accounting" (reporting) via `rootflags=uquota,gquota`.
