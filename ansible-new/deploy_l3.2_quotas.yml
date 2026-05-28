@@ -1,0 +1,32 @@
+---
+# Layer 3 - XFS Quotas
+# This playbook enables User, Group, and Project quota accounting on the LVM volumes.
+
+- name: Layer 3 - Enable XFS Quotas
+  hosts: pstat
+  become: yes
+  gather_facts: yes
+
+  pre_tasks:
+    - name: Ensure administrative SSH access is maintained before L3
+      include_role:
+        name: role_provision_access
+
+  tasks:
+    - name: Apply XFS Quota Configuration
+      include_role:
+        name: role_xfs_quotas
+
+    - name: Flush handlers to ensure reboot happens now
+      meta: flush_handlers
+
+    - name: Final Verification of Quota State
+      shell: "xfs_quota -x -c 'state' {{ item }}"
+      loop: "{{ pstat_quota_mounts }}"
+      register: quota_state
+      changed_when: false
+
+    - name: Display Quota State
+      debug:
+        msg: "{{ item.stdout }}"
+      loop: "{{ quota_state.results }}"
