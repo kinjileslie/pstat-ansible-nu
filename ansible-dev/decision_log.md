@@ -110,3 +110,31 @@
 - **Rationale**: Ensures that the system is never left in an inaccessible state. The "Lockdown" and "Restore" happen within the same persistent SSH session.
 
 **Open To-Do**: Evaluate moving the "Deviation" (e.g., Ed25519 support) into `group_vars` for a policy-driven approach, allowing specific nodes to be truly NIST-compliant while others remain operationally accessible.
+
+## 2026-05-28: The "MaxAuthTries" Trap in CUI-Hardened Nodes
+
+**Context**: After applying the `RedHatOfficial.rhel9_cui` (L3.3) role, the target nodes become significantly more sensitive to SSH authentication attempts. Even with `ControlMaster` active, manual SSH attempts from Bobby to the targets frequently result in `Permission denied (publickey,...)` and subsequent lockouts.
+
+**Diagnosis**:
+1. **Strict Auth Limits**: The CUI role enforces a strict `MaxAuthTries` limit (likely 3).
+2. **Identity Leaks**: If a user runs a manual `ssh` command without `-o IdentitiesOnly=yes` and a specific `-i` key, the SSH client offers every key in the agent. If the first 3 keys are incorrect, the server drops the connection immediately, regardless of whether the correct key was 4th in the list.
+3. **The "Invisible" Ban**: Because the CUI role also tightens Fail2Ban and SSHD logging, these "authentication failures" can trigger security shunning faster than on a base L1/L2 node.
+
+**Decision**: Mandate "Explicit Identity" for all manual and automated access to L3.3 nodes.
+- **Requirement**: All connections MUST use: `ssh -o IdentitiesOnly=yes -i <path_to_pink_key> <target>`.
+- **Implementation**: This is now codified in `ansible.cfg` for automation, but must be manually followed for all interactive shells.
+
+**Lesson Learned**: Compliance is not just about the server configuration; it changes the "rules of engagement" for the administrator. A "Standard" SSH command that works on a Dev node will trigger a security lockout on a CUI-hardened node.
+
+## 2026-05-28: Open Decision - L3 Dependency Mapping
+
+**Context**: Currently, `deploy_l3.1_fortress.yml` (LVM) and `deploy_l3.2_quotas.yml` (XFS Quotas) are tightly coupled. L3.2 assumes the existence of the volumes created by L3.1. Conversely, `deploy_l3.3_compliance.yml` is independent and can be run on any node.
+
+**Open Discussion**:
+Should L3.2 be refactored to be "Infrastructure-Aware" (applying quotas only to existing partitions) to allow independent execution?
+
+**Competing Strategies**:
+1. **The Refactor**: Modify L3.2 to detect mount points and apply quotas conditionally. This maximizes modularity.
+2. **The Logical Grouping**: Maintain the tight coupling but make it explicit in the documentation and naming that L3.1 and L3.2 form a single "Storage Suite," while L3.3 is a standalone "Security Overlay."
+
+**Status**: PENDING. Decision deferred until fleet baseline is established.
