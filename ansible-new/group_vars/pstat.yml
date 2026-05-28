@@ -5,7 +5,7 @@
 # 1. Connectivity & Orchestration
 ansible_user: almalinux
 ansible_become: yes
-ansible_ssh_common_args: '-o ProxyJump=ctrl1'
+ansible_ssh_common_args: '-i /home/support/.ssh/ansible-nu-pink_ed25519 -o IdentitiesOnly=yes'
 
 # 2. Identity & Access
 # List of public keys for system administrators (Managed by role_ssh_keys)

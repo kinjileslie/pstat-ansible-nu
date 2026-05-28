@@ -1,3 +1,0 @@
----
-ansible_user: almalinux
-ansible_ssh_common_args: '-o ProxyJump=ctrl1'
