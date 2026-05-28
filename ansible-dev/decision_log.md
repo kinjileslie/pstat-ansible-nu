@@ -99,3 +99,14 @@
 - **Rationale**: While the CUI role pushes for strict NIST adherence, operational stability and the fleet-wide adoption of Ed25519 keys take precedence. We maintain the capability for full NIST 800-171 compliance but explicitly opt-out of the Ed25519 ban to avoid administrative lockouts.
 
 **Lesson Learned**: Third-party security roles can introduce "destructive" changes to critical infrastructure (like SSH access). Always implement a "Restore Access" pattern that runs both BEFORE and AFTER high-risk hardening roles.
+
+## 2026-05-28: Integrating Compliance Adjustments into the Atomic Pipeline
+
+**Context**: The `RedHatOfficial.rhel9_cui` role disables `ssh-ed25519` by default to meet strict NIST guidelines. Because this role was run as a separate playbook, it created a "Lethal Gap" where the admin was locked out before a second "Adjustment" playbook could be run.
+
+**Decision**: Merge the "Adjustment" logic directly into the `deploy_l3.3_compliance.yml` playbook as `post_tasks`.
+- **Action**: Added a task to create `/etc/ssh/sshd_config.d/99-pstat-ed25519.conf` and restart `sshd` immediately after the CUI role completes.
+- **Symmetry**: Included a final call to `role_provision_access` as a safety check.
+- **Rationale**: Ensures that the system is never left in an inaccessible state. The "Lockdown" and "Restore" happen within the same persistent SSH session.
+
+**Open To-Do**: Evaluate moving the "Deviation" (e.g., Ed25519 support) into `group_vars` for a policy-driven approach, allowing specific nodes to be truly NIST-compliant while others remain operationally accessible.
