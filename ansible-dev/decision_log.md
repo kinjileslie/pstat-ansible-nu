@@ -88,3 +88,14 @@
 - Verified via `sshd` logs that while `sudo` sessions remain atomic, the underlying SSH transport is now stable and persistent.
 
 **Lesson Learned**: In complex jump chains and high-security target images, the "standard" Ansible connection model is too aggressive. Persistent connections (`ControlMaster`) and `pipelining` are mandatory for stability and to avoid being flagged as a security threat by intermediate firewalls.
+
+## 2026-05-28: Resolving the CUI-Ed25519 Algorithm Conflict
+
+**Context**: Applying the `RedHatOfficial.rhel9_cui` role disabled the `ssh-ed25519` signature algorithm in favor of stricter NIST-approved algorithms (RSA-SHA2-256/512). This resulted in immediate lockouts for all users using Ed25519 keys, even if the keys were correctly placed in `authorized_keys`.
+
+**Decision**: Implement a "Symmetry Override" for SSH algorithms.
+- **Action**: Created a specific configuration file `/etc/ssh/sshd_config.d/99-pstat-ed25519.conf` containing `PubkeyAcceptedAlgorithms +ssh-ed25519`.
+- **Implementation**: This override is now applied in both `role_lvm_fortress` (as a proactive measure) and `deploy_l3_compliance.yml` (as a corrective measure).
+- **Rationale**: While the CUI role pushes for strict NIST adherence, operational stability and the fleet-wide adoption of Ed25519 keys take precedence. We maintain the capability for full NIST 800-171 compliance but explicitly opt-out of the Ed25519 ban to avoid administrative lockouts.
+
+**Lesson Learned**: Third-party security roles can introduce "destructive" changes to critical infrastructure (like SSH access). Always implement a "Restore Access" pattern that runs both BEFORE and AFTER high-risk hardening roles.

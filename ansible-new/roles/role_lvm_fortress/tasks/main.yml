@@ -97,6 +97,13 @@
   vars:
     audit_role_name: "role_provision_access_post_lvm"
 
+- name: Force Ed25519 support in SSHD (CUI Override)
+  lineinfile:
+    path: /etc/ssh/sshd_config.d/99-pstat-ed25519.conf
+    line: "PubkeyAcceptedAlgorithms +ssh-ed25519"
+    create: yes
+    mode: '0644'
+
 - name: Audit role success
   ansible.builtin.include_role:
     name: role_audit

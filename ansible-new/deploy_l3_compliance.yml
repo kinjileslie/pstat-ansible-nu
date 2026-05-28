@@ -23,6 +23,9 @@
   gather_facts: yes
 
   pre_tasks:
+    - name: Ensure administrative SSH access is maintained before L3
+      include_role:
+        name: role_provision_access
     - name: Generate and set a random root password for compliance
       shell: |
         PASS=$(openssl rand -base64 32)

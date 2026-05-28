@@ -7,6 +7,11 @@
   become: yes
   gather_facts: yes
 
+  pre_tasks:
+    - name: Ensure administrative SSH access is maintained before L3
+      include_role:
+        name: role_provision_access
+
   tasks:
     - name: Apply XFS Quota Configuration
       include_role:

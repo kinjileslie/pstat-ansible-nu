@@ -8,10 +8,18 @@
   become: yes
   gather_facts: yes
 
+  pre_tasks:
+    - name: Ensure administrative SSH access is maintained before L3
+      include_role:
+        name: role_provision_access
+
   tasks:
     - name: Deploy LVM Fortress Storage
       include_role:
         name: role_lvm_fortress
+
+    # Note: Future tasks for RedHatOfficial.rhel9_cui will be added here
+    # once the storage layout is verified as operational.
 
     # Note: Future tasks for RedHatOfficial.rhel9_cui will be added here
     # once the storage layout is verified as operational.
