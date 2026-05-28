@@ -38,9 +38,11 @@ To check if a node has been correctly provisioned and see the audit trail:
 ### 3. Layer 3, 4, and 5 (Advanced Deployment)
 These layers follow an **Explicit Orchestration** model. Instead of hidden booleans, we use tags to specify exactly which "Capabilities" to install.
 
-- **Layer 3 (Hardening)**: Optional high-security benchmarks. Now split into two decoupled components:
-    - **Storage Foundation**: `deploy_l3_fortress.yml` (LVM partitioning) and `deploy_l3_quotas.yml` (XFS accounting).
-    - **Security Policy**: `deploy_l3_compliance.yml` (CUI/STIG hardening via `RedHatOfficial.rhel9_cui`).
+- **Layer 3 (Hardening)**: Optional high-security benchmarks. Now split into a sequenced pipeline:
+    - **L3.1 Storage Foundation**: `deploy_l3.1_fortress.yml` (LVM partitioning).
+    - **L3.2 Storage Accounting**: `deploy_l3.2_quotas.yml` (XFS accounting).
+    - **L3.3 Security Policy**: `deploy_l3.3_compliance.yml` (CUI/STIG hardening via `RedHatOfficial.rhel9_cui`).
+    - **L3.4 Operational Tuning**: `deploy_l3.4_adjust.yml` (Restores Ed25519 access and operational pragmatism).
     - *Note*: Policy can be applied without the Foundation for "semi-hardened" nodes.
     - **Connectivity**: Use the provided `ansible.cfg` (enabling `ControlMaster` and `pipelining`) to prevent network-level session resets and SSH lockouts during rapid task execution.
 
@@ -69,7 +71,7 @@ ssh -o IdentitiesOnly=yes -i /path/to/build_key -l almalinux -J ctrl1 <target>
 ```
 
 ## 🛡️ Compliance (Layer 3)
-Compliance is managed as an optional overlay. Use `deploy_l3_compliance.yml` with the following tags:
+Compliance is managed as an optional overlay. Use `deploy_l3.3_compliance.yml` with the following tags:
 
 | Tier | Tags | Description |
 | :--- | :--- | :--- |
