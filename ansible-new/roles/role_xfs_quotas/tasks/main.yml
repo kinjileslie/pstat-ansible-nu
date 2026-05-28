@@ -17,6 +17,7 @@
     - { lv: 'lv_audit', mount: "{{ pstat_lv_audit_mount }}", opts: "{{ pstat_lv_audit_options }},uquota,gquota,pquota" }
     - { lv: 'lv_log', mount: "{{ pstat_lv_log_mount }}", opts: "{{ pstat_lv_log_options }},uquota,gquota,pquota" }
     - { lv: 'lv_tmp', mount: "{{ pstat_lv_tmp_mount }}", opts: "{{ pstat_lv_tmp_options }},uquota,gquota,pquota" }
+    - { lv: 'lv_vartmp', mount: "{{ pstat_lv_vartmp_mount }}", opts: "{{ pstat_lv_vartmp_options }},uquota,gquota,pquota" }
     - { lv: 'lv_local', mount: "{{ pstat_lv_local_mount }}", opts: "{{ pstat_lv_local_options }},uquota,gquota,pquota" }
   notify: Reboot system for quota enablement
 
