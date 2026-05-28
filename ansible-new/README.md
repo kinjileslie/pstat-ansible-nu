@@ -17,7 +17,7 @@ Run the full baseline integration test:
 ansible-playbook -i inventories/pstat.ini test_l1_safe.yml --limit <hostname>
 ```
 
-**Note on Provisioning**: New VMs are instantiated via Cloud-Init with a minimal "Absolute Zero" configuration. This provides only the **Provisioning Key (Bobby)** and the `qemu-guest-agent`. All other users, keys, and packages are handled by the Ansible pipeline.
+**Note on Provisioning**: New VMs are instantiated via Cloud-Init with a minimal "Absolute Zero" configuration. This provides only the **Build Key (KINJI ANSIBLE NU PINK)** and the `qemu-guest-agent`. All other users, keys, and packages are handled by the Ansible pipeline.
 Alternatively, run specific layers:
 - **Layer 1 (Base)**: `ansible-playbook -i inventories/pstat.ini deploy_l1_base.yml --limit <hostname>`
 - **Layer 2 (Shield)**: `ansible-playbook -i inventories/pstat.ini deploy_l2_shield.yml --limit <hostname>`
@@ -57,6 +57,16 @@ ansible-playbook -i inventories/pstat.ini deploy_l4_system_apps.yml --limit <hos
 - **Agent Context**: For detailed technical history, decision logs, and AI-specific context, refer to [ansible_agent_context.txt](./ansible_agent_context.txt).
 - **Adding Jump Hosts**: Add new IPs to `group_vars/pstat.yml` under `pstat_mgmt_ips`. This automatically updates both the Firewall and Fail2Ban ignore lists.
 - **Customizing Roles**: All logic is atomic. To change a specific feature, edit the role in `roles/` and run the corresponding `deploy_lX.yml` playbook.
+
+### 📡 Connectivity & Jump Path
+**Path**: `Local` $\rightarrow$ `ctrl1` (Primary) / `ctrl2` (Backup) $\rightarrow$ `Target`.
+**Reasoning**: Simplified from the legacy nested-jump chain (`ufo-race` $\rightarrow$ `ctrl1.node`) to reduce latency and eliminate complex authentication failures.
+
+**Critical Connectivity Rule**:
+To avoid triggering `maxauthtries` limits on target nodes (caused by the SSH Agent offering incorrect identity keys), all manual and automated SSH connections **MUST** use the `IdentitiesOnly=yes` option:
+```bash
+ssh -o IdentitiesOnly=yes -i /path/to/build_key -l almalinux -J ctrl1 <target>
+```
 
 ## 🛡️ Compliance (Layer 3)
 Compliance is managed as an optional overlay. Use `deploy_l3_compliance.yml` with the following tags:
@@ -99,4 +109,5 @@ To maintain system stability and support the "Layer Cake" architecture, the foll
     - Implement a "Dynamic Announcement" system: 
         - Use `/etc/issue` as the static legal "No Trespassing" sign.
         - Use `/etc/motd` as a dynamic bulletin board for maintenance alerts, managed via a dedicated `deploy_announcement.yml` playbook.
+    - **[OPEN] SSH `maxauthtries` Recovery**: Document a reproducible method to clear an IP from the target's fail-list after hitting the maximum authentication attempts limit.
     - [ON HOLD] Layer 4 (Plumbing): Identity (LDAP/SSSD) and Monitoring.

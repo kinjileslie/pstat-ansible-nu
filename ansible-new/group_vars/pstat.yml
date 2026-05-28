@@ -10,8 +10,8 @@ ansible_ssh_common_args: '-o ProxyJump=ctrl1'
 # 2. Identity & Access
 # List of public keys for system administrators (Managed by role_ssh_keys)
 administrative_keys:
-  - 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC0+GqBqJFni9JPgGFsiyOyOewzekPllqoQEMHhMY7ntasnRPUEzOX50RkOhpI40PRcFQz0r8ZFbl1HX8wbg9kBfEj5xOResI34y/5ZU+RwXLT9lrjikFP+MjnbZPJjhDrm6rZJfJ/UIiiAbbEsBpY3NyM3u1MNhAPD39MEsbcmbgov07HE3PgsxzAbWlFmUbt0F3nVMZRAWQ3yZITSMZkkdBHQxV8LjdM1HMb3GyE7vc5vlmOyLVawM7fQWGUXl10/yeAiddm8Bin1OOiQN3YhW1ZvinfIS2bZ2+i65qI0zQ7lNOKI/48w43eo/zPXyRUsUaGzQoFpPcnIj+UbYlOd root@bob.aristotle.ucsb.edu'
-  - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICmYbEl6z3i33wzMROZz549ajMMVtWc6xhvi9TWGFVeQ kinji@ucsb'
+  - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAMdTvGYguI/h3pfZEqO1ZS5Lub0h2aJsJiyooiL+cbl KINJI ANSIBLE NU PINK'
+  - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAMdTvGYguI/h3pfZEqO1ZS5Lub0h2aJsJiyooiL+cbl KINJI ANSIBLE NU PINK'
 
 pstat_base_packages:
   - firewalld
