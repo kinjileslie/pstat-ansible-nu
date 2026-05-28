@@ -69,17 +69,22 @@
 
 **Impact**: Increases deployment flexibility and closes security audit gaps while maintaining the "Symmetry" goal.
 
-## 2026-05-28: Solving the "Connection Reset" and SSH Lockout Loop
+## 2026-05-28: The "Symmetry" of Connection Stability
 
-**Context**: During L1 and L3 runs, target VMs were intermittently returning `kex_exchange_identification: Connection reset by peer` or `Too many authentication failures`. This occurred even when using the correct keys and before any restrictive CUI policies were applied.
+**Context**: Encountered persistent `kex_exchange_identification: Connection reset by peer` and `Too many authentication failures` during L1 and L3 runs, even on fresh VMs.
 
 **Diagnosis**: 
-1. **Key Shuffling**: The SSH client on the controller (Bobby) was offering multiple keys from the agent, triggering `MaxAuthTries` on the server.
-2. **Network Sensitivity**: The multi-hop jump chain (Bobby $\rightarrow$ ctrl1 $\rightarrow$ VM) was sensitive to the "rapid-fire" connection/disconnection pattern of default Ansible tasks, causing intermediate network appliances to reset TCP sessions.
+1. **Key Shuffling**: The SSH client was offering all available keys in the agent, triggering `MaxAuthTries` on the server.
+2. **TCP Flood/Shunning**: The default Ansible "one connection per task" model created a burst of TCP sessions that triggered security appliances in the jump chain (`ctrl1` $\rightarrow$ VM), leading to temporary IP bans (the "Penalty Box").
 
 **Decisions**:
-1. **Client-Side Constraint**: Implemented `IdentitiesOnly=yes` and explicit identity file paths in SSH arguments to stop key shuffling.
-2. **Session Persistence**: Implemented `ControlMaster=auto` and `ControlPersist=60s` in `ansible.cfg`. This keeps a single SSH session open for the entire playbook, eliminating the need to re-authenticate for every task.
-3. **Pipelining**: Enabled `pipelining = True` to reduce the number of SSH operations per task.
+1. **Identity Constraint**: Added `IdentitiesOnly=yes` and specified the identity file in `ansible.cfg` to stop key shuffling.
+2. **Session Persistence**: Implemented `ControlMaster=auto` and `ControlPersist=60s` in `ansible.cfg`. This maintains a single persistent SSH tunnel for the entire playbook, bypassing the "rapid-fire" connection pattern.
+3. **Execution Optimization**: Enabled `pipelining = True` to execute Python modules directly via `stdin`, removing the need to upload/delete temporary files to `/tmp`.
 
-**Lesson Learned**: When working with complex jump chains and high-security target images, the "standard" Ansible connection model is too aggressive. Moving to a persistent connection model (ControlMaster) is required for stability.
+**Verification**:
+- Verified `ControlMaster` via the existence of the Unix socket in `~/.ansible/cp/`.
+- Verified `Symmetry` via `ansible-config dump` to ensure the engine is actually reading the local `ansible.cfg`.
+- Verified via `sshd` logs that while `sudo` sessions remain atomic, the underlying SSH transport is now stable and persistent.
+
+**Lesson Learned**: In complex jump chains and high-security target images, the "standard" Ansible connection model is too aggressive. Persistent connections (`ControlMaster`) and `pipelining` are mandatory for stability and to avoid being flagged as a security threat by intermediate firewalls.

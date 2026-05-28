@@ -42,7 +42,7 @@ These layers follow an **Explicit Orchestration** model. Instead of hidden boole
     - **Storage Foundation**: `deploy_l3_fortress.yml` (LVM partitioning) and `deploy_l3_quotas.yml` (XFS accounting).
     - **Security Policy**: `deploy_l3_compliance.yml` (CUI/STIG hardening via `RedHatOfficial.rhel9_cui`).
     - *Note*: Policy can be applied without the Foundation for "semi-hardened" nodes.
-    - **Connectivity**: Use `ansible.cfg` with `ControlMaster` and `IdentitiesOnly` to prevent network-level session resets and SSH lockout during rapid task execution.
+    - **Connectivity**: Use the provided `ansible.cfg` (enabling `ControlMaster` and `pipelining`) to prevent network-level session resets and SSH lockouts during rapid task execution.
 
 - **L4 (System Apps)**: Core infrastructure (e.g., PMM, Splunk, NFS).
 - **L5 (User Apps)**: Researcher tools (e.g., RStudio, Podman).
