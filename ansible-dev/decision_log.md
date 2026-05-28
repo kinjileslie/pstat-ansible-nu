@@ -68,3 +68,18 @@
     - NFS mount from `kingslanding.pstat` to `/home`, overlaying the local LVM partition.
 
 **Impact**: Increases deployment flexibility and closes security audit gaps while maintaining the "Symmetry" goal.
+
+## 2026-05-28: Solving the "Connection Reset" and SSH Lockout Loop
+
+**Context**: During L1 and L3 runs, target VMs were intermittently returning `kex_exchange_identification: Connection reset by peer` or `Too many authentication failures`. This occurred even when using the correct keys and before any restrictive CUI policies were applied.
+
+**Diagnosis**: 
+1. **Key Shuffling**: The SSH client on the controller (Bobby) was offering multiple keys from the agent, triggering `MaxAuthTries` on the server.
+2. **Network Sensitivity**: The multi-hop jump chain (Bobby $\rightarrow$ ctrl1 $\rightarrow$ VM) was sensitive to the "rapid-fire" connection/disconnection pattern of default Ansible tasks, causing intermediate network appliances to reset TCP sessions.
+
+**Decisions**:
+1. **Client-Side Constraint**: Implemented `IdentitiesOnly=yes` and explicit identity file paths in SSH arguments to stop key shuffling.
+2. **Session Persistence**: Implemented `ControlMaster=auto` and `ControlPersist=60s` in `ansible.cfg`. This keeps a single SSH session open for the entire playbook, eliminating the need to re-authenticate for every task.
+3. **Pipelining**: Enabled `pipelining = True` to reduce the number of SSH operations per task.
+
+**Lesson Learned**: When working with complex jump chains and high-security target images, the "standard" Ansible connection model is too aggressive. Moving to a persistent connection model (ControlMaster) is required for stability.
