@@ -1,28 +1,48 @@
 ---
-- name: Ensure the support user exists
-  ansible.builtin.user:
-    name: "{{ support_user }}"
-    shell: "{{ support_shell }}"
+- name: "USER | Ensure admin group exists"
+  group:
+    name: "{{ item.name }}"
+    gid: "{{ item.gid }}"
     state: present
-    append: yes
+  loop: "{{ pstat_admin_users }}"
 
-- name: Ensure support user is in the wheel group
-  ansible.builtin.user:
-    name: "{{ support_user }}"
-    groups: wheel
-    append: yes
+- name: "USER | Create admin users"
+  user:
+    name: "{{ item.name }}"
+    uid: "{{ item.uid }}"
+    group: "{{ item.name }}"
+    shell: /bin/bash
+    password: "!" # Lock the password
+    create_home: yes
+    state: present
+  loop: "{{ pstat_admin_users }}"
 
-- name: Configure passwordless sudo for support user
-  ansible.builtin.copy:
-    content: "{{ support_user }} ALL=(ALL) NOPASSWD:ALL"
-    dest: "/etc/sudoers.d/{{ support_user }}"
+- name: "USER | Deploy authorized keys"
+  authorized_key:
+    user: "{{ item.0.name }}"
+    state: present
+    key: "{{ lookup('vars', item.1) }}"
+  loop: "{{ pstat_admin_users | subelements('keys') }}"
+
+- name: "USER | Ensure provisioning user (almalinux) has the Nu Pink key"
+  authorized_key:
+    user: almalinux
+    state: present
+    key: "{{ pstat_key_nu_pink }}"
+
+- name: "USER | Configure passwordless sudo"
+  copy:
+    content: "%{{ item.name }} ALL=(ALL) NOPASSWD: ALL"
+    dest: "/etc/sudoers.d/{{ pstat_sudoers_file }}"
     mode: '0440'
     validate: /usr/sbin/visudo -cf %s
+  loop: "{{ pstat_admin_users }}"
 
-- name: Lock the support user password
-  ansible.builtin.user:
-    name: "{{ support_user }}"
-    password_lock: yes
+- name: "USER | Enable systemd linger"
+  command: "loginctl enable-linger {{ item.name }}"
+  loop: "{{ pstat_admin_users }}"
+  when: pstat_enable_linger | default(false)
+  changed_when: false # Linger is idempotent but doesn't always report 'changed'
 
 - name: Audit role success
   ansible.builtin.include_role:

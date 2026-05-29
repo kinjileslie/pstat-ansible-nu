@@ -1,5 +1,25 @@
 ---
-# Defaults for the support user
-support_user: support
-support_shell: /bin/bash
-# we are not managing keys here as they are handled by cloud-init
+# Core Users Configuration
+
+# List of administrative users to be created and managed
+# Each user is a dict: { name: 'username', uid: 1234, gid: 1234, keys: [ 'key_var1', 'key_var2' ] }
+pstat_admin_users:
+  - name: support
+    uid: 1000
+    gid: 1000
+    keys: 
+      - pstat_key_bobby_rsa
+      - pstat_key_bobby_ecdsa
+      - pstat_key_bobby_ed25519
+      - pstat_key_kinji_red
+  - name: kinji
+    uid: 10035
+    gid: 10035
+    keys: 
+      - pstat_key_kinji_red
+
+# Whether to enable systemd linger for the admin users (allows background processes)
+pstat_enable_linger: true
+
+# The sudoers file name to be created in /etc/sudoers.d/
+pstat_sudoers_file: "pstat_admins"
