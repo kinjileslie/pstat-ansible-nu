@@ -33,6 +33,7 @@ The following files contain the strategic and technical blueprint:
 - Pending: 
     - Layer 4 (System Apps): Identity (LDAP/SSSD), Moving Home Directories to `/local/home`, Monitoring, Logging, Backups, NFS.
     - Layer 5 (User Apps): Pods, Scientific Stack, RStudio.
+    - Symmetry Cleanup: Remove "Canary" debug prints from `role_network_bridge`.
 
 ## 4. EXTERNAL SOURCE REPOS (FOR HARVESTING)
 - git.lsit: /Users/kinji/git.lsit/ansible-playbooks (Modern, Atomic tasks)

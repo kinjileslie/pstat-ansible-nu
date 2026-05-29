@@ -55,6 +55,9 @@ These layers follow an **Explicit Orchestration** model. Instead of hidden boole
 - **L4 (System Apps/Plumbing)**: Core infrastructure and capability-based configurations.
     - **Capability-Based Model**: Instead of server-specific roles, we use "Capability" roles (e.g., `role_network_bridge`) triggered by variables in `host_vars`.
     - **Registry**: See [CAPABILITIES.md](./CAPABILITIES.md) for a full list of available toggles and their required variables.
+    - **Network Bridge (Core-and-Spoke)**: Solves the "Default Route Collision" during multi-interface provisioning.
+        - **Persistence Strategy**: Uses `ipv4.route-metric` to anchor the Public Interface (`eth1`) as the primary gateway (Metric 50) while allowing the Internal Interface (`eth0`) to exist as a secondary (Metric 100+).
+        - **Stability**: This ensures that even when DHCP pushes competing gateways, the "Management Path" remains open and survives reboots.
     - **Example**: A node marked as `is_network_bridge: true` will automatically receive the "Core-and-Spoke" routing configuration to bridge the 1173/2176 VLANs.
 - **L5 (User Apps)**: Researcher tools (e.g., RStudio, Podman).
 
