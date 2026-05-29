@@ -111,14 +111,11 @@ To maintain system stability and support the "Layer Cake" architecture, the foll
 
 **Current Status**: 
 - **Baseline**: L1 and L2 fully operational.
-- **Storage**: L3.1 (Fortress) and L3.2 (Quotas) verified on `reforger` fleet.
+- **Storage**: L3.1 (Fortress) and L3.2 (Quotas) fully verified and implemented across the fleet (LVM Layout: `/var/log/audit`, `/var/log`, `/tmp`, `/var/tmp`, `/home`, `/local`).
 - **Compliance**: L3.3 (CUI) verified with operational Ed25519 override on `reforger-01` (now `seabastion`).
 - **Plumbing**: L4 capability-based model implemented; `role_network_bridge` verified for multi-VLAN routing.
 - **Open Items**:
     - Validate the overlap between low and medium complexity controls in the RHEL9 CUI role.
-    - Update `role_lvm_fortress` to the "CUI-Complete" layout (add `/var/tmp` and `/home`).
-    - Isolate `/var/tmp` via LVM to prevent root partition exhaustion (CUI requirement).
-    - Execute the "Home Pivot" to `/local/home` to isolate user data from OS.
     - Implement legally compliant "California-grade" MOTD (Privacy/Monitoring warnings).
     - Implement a "Dynamic Announcement" system: 
         - Use `/etc/issue` as the static legal "No Trespassing" sign.
