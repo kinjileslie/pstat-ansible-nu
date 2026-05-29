@@ -1,0 +1,15 @@
+---
+# Host variables for the SeaBastion bridge node
+is_network_bridge: true
+
+# Interface on the 1173 / Isolated network
+bridge_internal_iface: "eth0"
+bridge_internal_gw: "10.2.16.1"
+
+# Routes to the internal fleet
+bridge_internal_routes:
+  - { network: "10.2.0.0/16", via: "10.2.16.1" }
+  - { network: "10.0.0.0/8", via: "10.2.16.1" }
+
+# Interface on the 2176 / Normal network
+bridge_external_iface: "Wired connection 1"

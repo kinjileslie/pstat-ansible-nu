@@ -1,0 +1,42 @@
+---
+# Tasks to implement the Core-and-Spoke routing model
+
+- name: "BRIDGE | Discover UUID for internal interface"
+  shell: "nmcli connection show '{{ bridge_internal_iface }}' | grep 'connection.uuid' | awk '{print $2}'"
+  register: internal_uuid_cmd
+  changed_when: false
+
+- name: "BRIDGE | Set internal UUID fact"
+  set_fact:
+    internal_conn_uuid: "{{ internal_uuid_cmd.stdout }}"
+
+- name: "BRIDGE | Ensure internal interface ignores DHCP default gateway"
+  # We use the UUID to avoid "pretty string" naming issues
+  shell: "nmcli connection modify '{{ internal_conn_uuid }}' ipv4.ignore-auto-routes yes"
+  register: nmcli_result
+  changed_when: "'successfully modified' in nmcli_result.stdout"
+  failed_when: 
+    - nmcli_result.rc != 0 
+    - "'already set' not in nmcli_result.stderr"
+
+- name: "BRIDGE | Apply the ignore-auto-routes change"
+  shell: "nmcli connection up '{{ internal_conn_uuid }}'"
+  when: nmcli_result.changed
+
+- name: "BRIDGE | Configure static routes for internal networks"
+  shell: "nmcli connection modify '{{ internal_conn_uuid }}' +ipv4.routes '{{ item.network }} {{ item.via }}' "
+  loop: "{{ bridge_internal_routes }}"
+  register: route_result
+  changed_when: "'successfully modified' in route_result.stdout"
+
+- name: "BRIDGE | Apply static route changes"
+  shell: "nmcli connection up '{{ internal_conn_uuid }}'"
+  when: route_result.changed
+
+- name: "BRIDGE | Verify routing table state"
+  shell: "ip route"
+  register: routing_table
+
+- name: "BRIDGE | Log final routing state"
+  debug:
+    var: routing_table.stdout_lines

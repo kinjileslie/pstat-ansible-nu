@@ -1,0 +1,4 @@
+---
+# role_network_bridge
+# Implements the "Core-and-Spoke" routing model for bastion/bridge nodes.
+# This ensures a stable default gateway while maintaining connectivity to isolated VLANs.

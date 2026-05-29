@@ -1,0 +1,16 @@
+---
+# Defaults for the network bridge capability.
+# These should be overridden in host_vars for specific bridge nodes.
+
+# The interface connected to the internal/isolated network (e.g., 1173 VLAN)
+bridge_internal_iface: "eth0"
+
+# The gateway for the internal network
+bridge_internal_gw: "10.2.16.1"
+
+# A list of networks that must be routed through the internal gateway
+# Format: { network: "10.2.0.0/16", via: "10.2.16.1" }
+bridge_internal_routes: []
+
+# The interface that should maintain the default gateway (e.g., 2176/Public VLAN)
+bridge_external_iface: "eth1"

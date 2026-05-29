@@ -1,0 +1,22 @@
+---
+# ==============================================================================
+# LAYER 4 - SYSTEM APPS & PLUMBING
+# ==============================================================================
+# This playbook configures core infrastructure capabilities. 
+# Roles are applied conditionally based on capabilities defined in host_vars.
+# ==============================================================================
+
+- name: Layer 4 - System Apps and Plumbing
+  hosts: pstat
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: "CAPABILITY | Network Bridge (Core-and-Spoke Routing)"
+      include_role:
+        name: role_network_bridge
+      when: is_network_bridge | default(false)
+
+    - name: "CAPABILITY | Other L4 Services"
+      debug:
+        msg: "Other L4 services (PMM, Splunk, etc.) are currently on hold."
