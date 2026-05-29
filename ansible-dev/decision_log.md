@@ -138,3 +138,19 @@ Should L3.2 be refactored to be "Infrastructure-Aware" (applying quotas only to 
 2. **The Logical Grouping**: Maintain the tight coupling but make it explicit in the documentation and naming that L3.1 and L3.2 form a single "Storage Suite," while L3.3 is a standalone "Security Overlay."
 
 **Status**: PENDING. Decision deferred until fleet baseline is established.
+
+## 2026-05-28: Transition to Capability-Based Configuration (The "Bridge" Model)
+
+**Context**: The need for a "Bastion" node (`seabastion`) created a requirement for a unique network configuration (bridging the 1173 and 2176 VLANs) that differs from the rest of the fleet.
+
+**Decision**: Reject "server-specific" roles in favor of a **Capability-Based Model**.
+- **Approach**: Create a generic `role_network_bridge` that implements the "Core-and-Spoke" routing model (Default Gateway on the public interface, static routes for the internal target networks).
+- **Trigger**: The role is applied conditionally based on a variable in `host_vars` (e.g., `is_network_bridge: true`).
+- **Symmetry**: This allows any node in the fleet to be promoted to a "Bridge" node simply by updating its identity in `host_vars`, without modifying the underlying playbook logic.
+
+**Rationale**: Maintains the "Layer Cake" architectural integrity. It avoids "special case" playbooks and ensures that the system remains scalable. Whether we have one bastion or twenty, the code remains identical.
+
+**Implementation Plan**:
+1. Develop `role_network_bridge`.
+2. Integrate into the Layer 4 (Plumbing) pipeline.
+3. Define `seabastion` identity in `host_vars`.

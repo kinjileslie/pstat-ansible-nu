@@ -45,7 +45,9 @@ These layers follow an **Explicit Orchestration** model. Instead of hidden boole
     - *Note*: Policy can be applied without the Foundation for "semi-hardened" nodes.
     - **Connectivity**: Use the provided `ansible.cfg` (enabling `ControlMaster` and `pipelining`) to prevent network-level session resets and SSH lockouts during rapid task execution.
 
-- **L4 (System Apps)**: Core infrastructure (e.g., PMM, Splunk, NFS).
+- **L4 (System Apps/Plumbing)**: Core infrastructure and capability-based configurations.
+    - **Capability-Based Model**: Instead of server-specific roles, we use "Capability" roles (e.g., `role_network_bridge`) triggered by variables in `host_vars`.
+    - **Example**: A node marked as `is_network_bridge: true` will automatically receive the "Core-and-Spoke" routing configuration to bridge the 1173/2176 VLANs.
 - **L5 (User Apps)**: Researcher tools (e.g., RStudio, Podman).
 
 **Usage**:
