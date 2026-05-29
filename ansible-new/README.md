@@ -66,10 +66,6 @@ ansible-playbook -i inventories/pstat.ini deploy_l4_system_apps.yml --limit <hos
 
 ## 🛠 Maintenance Notes
 - **Firewall Versioning**: A known technical debt item; the current `/etc/ansible/firewall_version.txt` is static. Future work is needed to implement a dynamic version string that reflects the active `pstat_firewall_profile` and policy version.
-- **Compute Strategy (Hyper-Node vs. Fleet)**: We are evaluating a pivot from a multi-node fleet to a "Hyper-Node" model (one large VM). This reduces OS bloat and management overhead while leveraging Podman/cgroups for user isolation.
-- **Data Strategy (Persistence & Export)**: 
-    - We will utilize Harvester's detachable volumes (`vdb`) for high-performance local state (Sovereign Data).
-    - We retain the requirement for Network Storage (NFS/CephFS) capabilities to allow the Hyper-Node to act as a Data Gateway for external specialized hardware (e.g., GPU workstations).
 - **Agent Context**: For detailed technical history, decision logs, and AI-specific context, refer to [ansible_agent_context.txt](./ansible_agent_context.txt).
 - **Adding Jump Hosts**: Add new IPs to `group_vars/pstat.yml` under `pstat_mgmt_ips`. This automatically updates both the Firewall and Fail2Ban ignore lists.
 - **Customizing Roles**: All logic is atomic. To change a specific feature, edit the role in `roles/` and run the corresponding `deploy_lX.yml` playbook.
@@ -115,11 +111,14 @@ To maintain system stability and support the "Layer Cake" architecture, the foll
 
 **Current Status**: 
 - **Baseline**: L1 and L2 fully operational.
-- **Storage**: L3.1 (Fortress) and L3.2 (Quotas) fully verified and implemented across the fleet (LVM Layout: `/var/log/audit`, `/var/log`, `/tmp`, `/var/tmp`, `/home`, `/local`).
+- **Storage**: L3.1 (Fortress) and L3.2 (Quotas) verified on `reforger` fleet.
 - **Compliance**: L3.3 (CUI) verified with operational Ed25519 override on `reforger-01` (now `seabastion`).
 - **Plumbing**: L4 capability-based model implemented; `role_network_bridge` verified for multi-VLAN routing.
 - **Open Items**:
     - Validate the overlap between low and medium complexity controls in the RHEL9 CUI role.
+    - Update `role_lvm_fortress` to the "CUI-Complete" layout (add `/var/tmp` and `/home`).
+    - Isolate `/var/tmp` via LVM to prevent root partition exhaustion (CUI requirement).
+    - Execute the "Home Pivot" to `/local/home` to isolate user data from OS.
     - Implement legally compliant "California-grade" MOTD (Privacy/Monitoring warnings).
     - Implement a "Dynamic Announcement" system: 
         - Use `/etc/issue` as the static legal "No Trespassing" sign.

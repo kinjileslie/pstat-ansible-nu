@@ -5,8 +5,8 @@
 # Each user is a dict: { name: 'username', uid: 1234, gid: 1234, keys: [ 'key_var1', 'key_var2' ] }
 pstat_admin_users:
   - name: support
-    uid: 1000
-    gid: 1000
+    uid: 1001
+    gid: 1001
     keys: 
       - pstat_key_bobby_rsa
       - pstat_key_bobby_ecdsa
