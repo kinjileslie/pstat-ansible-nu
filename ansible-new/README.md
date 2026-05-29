@@ -101,8 +101,10 @@ To maintain system stability and support the "Layer Cake" architecture, the foll
 - **SSH Daemon (`sshd`)**: All CUI-driven `sshd` modifications are disabled. All SSH hardening is centrally managed by `role_ssh_hardening` to ensure jump-chain stability.
 
 **Current Status**: 
-- Initial "Low" pass achieved ~83.7% compliance on `forger19`.
-- "Medium" pass showed zero additional changes.
+- **Baseline**: L1 and L2 fully operational.
+- **Storage**: L3.1 (Fortress) and L3.2 (Quotas) verified on `reforger` fleet.
+- **Compliance**: L3.3 (CUI) verified with operational Ed25519 override on `reforger-01` (now `seabastion`).
+- **Plumbing**: L4 capability-based model implemented; `role_network_bridge` verified for multi-VLAN routing.
 - **Open Items**:
     - Validate the overlap between low and medium complexity controls in the RHEL9 CUI role.
     - Update `role_lvm_fortress` to the "CUI-Complete" layout (add `/var/tmp` and `/home`).

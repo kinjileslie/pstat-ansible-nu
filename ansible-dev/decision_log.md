@@ -154,3 +154,23 @@ Should L3.2 be refactored to be "Infrastructure-Aware" (applying quotas only to 
 1. Develop `role_network_bridge`.
 2. Integrate into the Layer 4 (Plumbing) pipeline.
 3. Define `seabastion` identity in `host_vars`.
+
+## 2026-05-29: The "Bridge" Routing and NetworkManager UUID Discovery
+
+**Context**: Implementing a "Bastion" node (`seabastion`) required bridging two distinct VLANs (1173/Internal and 2176/Public). This introduced significant routing instability due to dual-DHCP default gateways and inconsistent NetworkManager profile naming.
+
+**Technical Discoveries**:
+1. **The Default Gateway Flip-Flop**: When two interfaces both provide a default gateway via DHCP, the kernel uses the one with the lowest metric. Manual deletion (`ip route del`) is temporary because the DHCP client restores the route upon lease renewal.
+2. **NMCLI Profile Naming**: Relying on profile names (e.g., "Wired connection 1") is fragile. The only immutable identifier for a network profile is the UUID.
+3. **The UUID Extraction Trap**: Modern `nmcli` versions have inconsistent support for the `-g uuid` flag. The most portable method to extract a UUID is: `nmcli connection show 'DEVICE' | grep 'connection.uuid' | awk '{print $2}'`.
+4. **The "Tethered" Routing Requirement**: Even if a config file is correct, `nmcli` modifications may not immediately affect the kernel's active routing table. A `nmcli connection up` command is required to force a synchronization of the state.
+
+**Decisions**:
+1. **Core-and-Spoke Model**: 
+    - Set the Public interface as the primary exit (default gateway).
+    - Configure the Internal interface to `ipv4.ignore-auto-routes yes`.
+    - Implement explicit static routes (e.g., `10.0.0.0/8`) for the internal fleet to ensure target traffic always uses the bridge.
+2. **Capability-Based Orchestration**: Created `role_network_bridge` as a "Capability" role. It is applied conditionally via `host_vars` (`is_network_bridge: true`), allowing any node to be promoted to a bastion without changing the playbook structure.
+3. **UUID Discovery Pattern**: The role now dynamically discovers the UUID of the target device at runtime, removing the need to hardcode fragile strings or UUIDs in `host_vars`.
+
+**Lesson Learned**: In multi-homed environments, "Configuration" $\neq$ "State." Always force a connection refresh (`nmcli connection up`) after modifying routing parameters to ensure the kernel's active table matches the desired state.
