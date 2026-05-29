@@ -16,6 +16,7 @@
       include_role:
         name: role_network_bridge
       when: is_network_bridge | default(false)
+      tags: [role_network_bridge, network_bridge]
 
     - name: "CAPABILITY | Other L4 Services"
       debug:

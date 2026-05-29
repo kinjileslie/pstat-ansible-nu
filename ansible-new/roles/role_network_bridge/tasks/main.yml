@@ -1,4 +1,8 @@
 ---
+- name: "BRIDGE | CANARY CHECK"
+  debug:
+    msg: "HELLO FROM THE BRIDGE - ROLE IS ACTIVELY EXECUTING"
+
 # Tasks to implement the Core-and-Spoke routing model
 
 - name: "BRIDGE | Discover UUID for internal interface"
@@ -6,21 +10,20 @@
   register: internal_uuid_cmd
   changed_when: false
 
-- name: "BRIDGE | Set internal UUID fact"
+- name: "BRIDGE | Discover UUID for public interface"
+  shell: "nmcli connection show '{{ bridge_external_iface }}' | grep 'connection.uuid' | awk '{print $2}'"
+  register: public_uuid_cmd
+  changed_when: false
+
+- name: "BRIDGE | Set UUID facts"
   set_fact:
     internal_conn_uuid: "{{ internal_uuid_cmd.stdout }}"
+    public_conn_uuid: "{{ public_uuid_cmd.stdout }}"
 
-- name: "BRIDGE | Ensure internal interface ignores DHCP default gateway"
-  shell: "nmcli connection modify '{{ internal_conn_uuid }}' ipv4.ignore-auto-routes yes"
-  register: nmcli_result
-  changed_when: "'successfully modified' in nmcli_result.stdout"
-  failed_when: 
-    - nmcli_result.rc != 0 
-    - "'already set' not in nmcli_result.stderr"
-
-- name: "BRIDGE | Apply the ignore-auto-routes change"
-  shell: "nmcli connection up '{{ internal_conn_uuid }}'"
-  # Removed 'when' to force synchronization of the kernel routing table
+- name: "BRIDGE | Set public interface as primary with low metric"
+  shell: "nmcli connection modify '{{ public_conn_uuid }}' ipv4.method auto ipv4.route-metric 50"
+  register: nmcli_public
+  changed_when: "'successfully modified' in nmcli_public.stdout"
 
 - name: "BRIDGE | Configure static routes for internal networks"
   shell: "nmcli connection modify '{{ internal_conn_uuid }}' +ipv4.routes '{{ item.network }} {{ item.via }}' "
@@ -28,9 +31,11 @@
   register: route_result
   changed_when: "'successfully modified' in route_result.stdout"
 
-- name: "BRIDGE | Apply static route changes"
-  shell: "nmcli connection up '{{ internal_conn_uuid }}'"
-  # Removed 'when' to force synchronization of the kernel routing table
+- name: "BRIDGE | Force NetworkManager to re-apply all profiles"
+  shell: |
+    nmcli connection up '{{ public_conn_uuid }}'
+    nmcli connection up '{{ internal_conn_uuid }}'
+  register: nm_up_result
 
 - name: "BRIDGE | Verify routing table state"
   shell: "ip route"
