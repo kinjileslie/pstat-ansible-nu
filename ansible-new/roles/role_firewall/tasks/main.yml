@@ -13,6 +13,25 @@
     state: started
     enabled: yes
 
+- name: "FIREWALL | Inspect current zones"
+  shell: "firewall-cmd --get-zones"
+  register: current_zones_raw
+  changed_when: false
+
+- name: "FIREWALL | Parse current zones into list"
+  set_fact:
+    current_zones: "{{ current_zones_raw.stdout.split(' ') }}"
+
+- name: "FIREWALL | Prune legacy/unauthorized zones"
+  ansible.posix.firewalld:
+    zone: "{{ item }}"
+    state: absent
+    permanent: yes
+  loop: "{{ current_zones | difference(pstat_zones.keys() | list) }}"
+  when: 
+    - item != 'public'
+    - item not in ['block', 'dmz', 'drop', 'external', 'home', 'internal', 'nm-shared', 'trusted', 'work']
+
 - name: Create IP sets from templates
   ansible.builtin.template:
     src: ipset.xml.j2
@@ -31,6 +50,9 @@
   loop: "{{ pstat_zones.keys() | list }}"
   loop_control:
     loop_var: zone_name
+  vars:
+    # Map the current profile's services for the specific zone being processed
+    zone_services: "{{ pstat_firewall_profiles[pstat_firewall_profile][zone_name] | default([]) }}"
 
 - name: Write Firewall Policy Version Breadcrumb
   ansible.builtin.copy:

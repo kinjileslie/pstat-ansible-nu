@@ -13,3 +13,6 @@ bridge_internal_routes:
 
 # Interface on the 2176 / Normal network
 bridge_external_iface: "Wired connection 1"
+
+# firewall ansible policy level 
+pstat_firewall_profile: "access-level2-internal"

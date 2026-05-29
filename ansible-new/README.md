@@ -20,7 +20,14 @@ ansible-playbook -i inventories/pstat.ini test_l1_safe.yml --limit <hostname>
 **Note on Provisioning**: New VMs are instantiated via Cloud-Init with a minimal "Absolute Zero" configuration. This provides only the **Build Key (KINJI ANSIBLE NU PINK)** and the `qemu-guest-agent`. All other users, keys, and packages are handled by the Ansible pipeline.
 Alternatively, run specific layers:
 - **Layer 1 (Base)**: `ansible-playbook -i inventories/pstat.ini deploy_l1_base.yml --limit <hostname>`
-- **Layer 2 (Shield)**: `ansible-playbook -i inventories/pstat.ini deploy_l2_shield.yml --limit <hostname>`
+- **Layer 2 (Shield)**: Perimeter security. Now utilizes a **Profile-Based Firewall** model:
+    - **Firewall Profiles**: Instead of individual toggles, nodes are assigned an access level in `host_vars` (e.g., `access-level3-restricted`).
+    - **Tiered Trust**: Policies are applied across four distinct zones: `management` (Fortress), `campus` (Internal), `public` (Wild), and functional zones (`monitoring`, `backup`).
+    - **Access Gradient**:
+        - `access-level1-public`: Open to the world (SSH enabled on public zone).
+        - `access-level2-internal`: Open to Campus and Management.
+        - `access-level3-restricted`: Open to Management only.
+    - **Symmetry**: This allows for rapid fleet-wide security shifts (e.g., moving all nodes to `access-level3-restricted` during an incident) while maintaining granular control.
 
 ### 2. Verifying Node State
 To check if a node has been correctly provisioned and see the audit trail:
@@ -58,6 +65,7 @@ ansible-playbook -i inventories/pstat.ini deploy_l4_system_apps.yml --limit <hos
 *Note: In the future, common tag sets can be defined in `group_vars` to automate the selection of standard capabilities.*
 
 ## 🛠 Maintenance Notes
+- **Firewall Versioning**: A known technical debt item; the current `/etc/ansible/firewall_version.txt` is static. Future work is needed to implement a dynamic version string that reflects the active `pstat_firewall_profile` and policy version.
 - **Agent Context**: For detailed technical history, decision logs, and AI-specific context, refer to [ansible_agent_context.txt](./ansible_agent_context.txt).
 - **Adding Jump Hosts**: Add new IPs to `group_vars/pstat.yml` under `pstat_mgmt_ips`. This automatically updates both the Firewall and Fail2Ban ignore lists.
 - **Customizing Roles**: All logic is atomic. To change a specific feature, edit the role in `roles/` and run the corresponding `deploy_lX.yml` playbook.

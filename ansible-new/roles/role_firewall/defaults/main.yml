@@ -3,9 +3,9 @@
 # Define IP sets as: { name: 'set_name', type: 'hash:net' or 'hash:ip', ips: [ 'ip1', 'ip2' ] }
 
 pstat_ipsets:
-  - name: internal
-    type: "hash:net"
-    ips: ["128.111.219.0/24"]
+  - name: management
+    type: "hash:ip"
+    ips: "{{ pstat_mgmt_ips }}"
   - name: campus
     type: "hash:net"
     ips: ["128.111.0.0/16", "169.229.0.0/16", "169.230.0.0/15", "169.232.0.0/15"]
@@ -16,20 +16,38 @@ pstat_ipsets:
     type: "hash:ip"
     ips: "{{ pstat_backup_ips }}"
 
-# Zone Mapping: Each zone has its OWN unique source IP set.
-# NO overlap between sources to avoid ZONE_CONFLICT.
+# Access Level Profiles
+# We map our levels to built-in firewalld zones for maximum stability and NetworkManager compatibility.
+# Mapping:
+#   Level 3 (Restricted) -> 'trusted' zone
+#   Level 2 (Internal)   -> 'internal' zone
+#   Level 1 (Public)     -> 'public' zone
+pstat_firewall_profiles:
+  access-level1-public:
+    public: ["ssh", "snmp"]
+    internal: ["ssh", "snmp"]
+    trusted: ["ssh", "snmp", "cockpit"]
+  access-level2-internal:
+    public: []
+    internal: ["ssh", "snmp"]
+    trusted: ["ssh", "snmp", "cockpit"]
+  access-level3-restricted:
+    public: []
+    internal: []
+    trusted: ["ssh", "snmp", "cockpit"]
+
+# Default profile if none is specified in host_vars
+pstat_firewall_profile: "access-level2-internal"
+
+# Zone Mapping: Repurposing built-in zones to avoid NetworkManager conflicts.
 pstat_zones:
   public:
-    services: ["ssh", "snmp"]
+    source: null # Default zone, no source needed
   internal:
-    sources: ["ipset:internal"]
-    services: ["ssh", "snmp", "bacula-client", "cockpit", "dhcpv6-client", "mdns"]
+    source: "ipset:campus"
+  trusted:
+    source: "ipset:management"
   monitoring:
-    sources: ["ipset:monitoring"]
-    services: ["snmp"]
+    source: "ipset:monitoring"
   backup-network:
-    sources: ["ipset:backup-network"]
-    services: ["bacula-client"]
-  campus:
-    sources: ["ipset:campus"]
-    services: []
+    source: "ipset:backup-network"

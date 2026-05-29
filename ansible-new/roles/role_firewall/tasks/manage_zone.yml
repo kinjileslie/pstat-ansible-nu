@@ -20,5 +20,23 @@
     service: "{{ item }}"
     state: enabled
     permanent: yes
-  loop: "{{ pstat_zones[zone_name].services | default([]) }}"
-  when: pstat_zones[zone_name].services is defined
+  loop: "{{ zone_services }}"
+  when: zone_services is defined
+
+- name: Prune Unauthorized Services from Zone
+  # Get all currently enabled services in this zone to find what needs to be removed
+  shell: "firewall-cmd --permanent --zone={{ zone_name }} --list-services"
+  register: current_services_raw
+  changed_when: false
+
+- name: Remove services not defined in the current profile
+  ansible.posix.firewalld:
+    zone: "{{ zone_name }}"
+    service: "{{ item }}"
+    state: disabled
+    permanent: yes
+  loop: "{{ current_services_raw.stdout.split(' ') }}"
+  when: 
+    - item != ''
+    - item not in zone_services
+    - zone_services is defined
