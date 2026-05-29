@@ -47,6 +47,7 @@ These layers follow an **Explicit Orchestration** model. Instead of hidden boole
 
 - **L4 (System Apps/Plumbing)**: Core infrastructure and capability-based configurations.
     - **Capability-Based Model**: Instead of server-specific roles, we use "Capability" roles (e.g., `role_network_bridge`) triggered by variables in `host_vars`.
+    - **Registry**: See [CAPABILITIES.md](./CAPABILITIES.md) for a full list of available toggles and their required variables.
     - **Example**: A node marked as `is_network_bridge: true` will automatically receive the "Core-and-Spoke" routing configuration to bridge the 1173/2176 VLANs.
 - **L5 (User Apps)**: Researcher tools (e.g., RStudio, Podman).
 
