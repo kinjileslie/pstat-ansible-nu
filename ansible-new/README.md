@@ -66,6 +66,10 @@ ansible-playbook -i inventories/pstat.ini deploy_l4_system_apps.yml --limit <hos
 
 ## 🛠 Maintenance Notes
 - **Firewall Versioning**: A known technical debt item; the current `/etc/ansible/firewall_version.txt` is static. Future work is needed to implement a dynamic version string that reflects the active `pstat_firewall_profile` and policy version.
+- **Compute Strategy (Hyper-Node vs. Fleet)**: We are evaluating a pivot from a multi-node fleet to a "Hyper-Node" model (one large VM). This reduces OS bloat and management overhead while leveraging Podman/cgroups for user isolation.
+- **Data Strategy (Persistence & Export)**: 
+    - We will utilize Harvester's detachable volumes (`vdb`) for high-performance local state (Sovereign Data).
+    - We retain the requirement for Network Storage (NFS/CephFS) capabilities to allow the Hyper-Node to act as a Data Gateway for external specialized hardware (e.g., GPU workstations).
 - **Agent Context**: For detailed technical history, decision logs, and AI-specific context, refer to [ansible_agent_context.txt](./ansible_agent_context.txt).
 - **Adding Jump Hosts**: Add new IPs to `group_vars/pstat.yml` under `pstat_mgmt_ips`. This automatically updates both the Firewall and Fail2Ban ignore lists.
 - **Customizing Roles**: All logic is atomic. To change a specific feature, edit the role in `roles/` and run the corresponding `deploy_lX.yml` playbook.
