@@ -1,68 +1,37 @@
 ---
-- name: Ensure /etc/ansible exists
-  ansible.builtin.file:
-    path: /etc/ansible
-    state: directory
-    owner: root
-    group: root
-    mode: '0755'
-
 - name: Ensure firewalld is running
   ansible.builtin.systemd:
     name: firewalld
     state: started
     enabled: yes
 
-- name: "FIREWALL | Inspect current zones"
-  shell: "firewall-cmd --get-zones"
-  register: current_zones_raw
-  changed_when: false
+- name: "FIREWALL | Nuke existing IPSet XMLs"
+  ansible.builtin.shell: "rm -rf /etc/firewalld/ipsets/*.xml"
 
-- name: "FIREWALL | Parse current zones into list"
-  set_fact:
-    current_zones: "{{ current_zones_raw.stdout.split(' ') }}"
-
-- name: "FIREWALL | Prune legacy/unauthorized zones"
-  ansible.posix.firewalld:
-    zone: "{{ item }}"
-    state: absent
-    permanent: yes
-  loop: "{{ current_zones | difference(pstat_zones.keys() | list) }}"
-  when: 
-    - item != 'public'
-    - item not in ['block', 'dmz', 'drop', 'external', 'home', 'internal', 'nm-shared', 'trusted', 'work']
-
-- name: "FIREWALL | Populate IPSets directly in Kernel"
-  shell: "ipset create {{ item.name }} {{ item.type }} 2>/dev/null || true; for ip in {{ item.ips | join(' ') }}; do ipset add {{ item.name }} $ip 2>/dev/null || true; done"
+- name: "FIREWALL | Write IPSet XMLs from templates"
+  ansible.builtin.template:
+    src: ipset.xml.j2
+    dest: "/etc/firewalld/ipsets/{{ item.name }}.xml"
   loop: "{{ pstat_ipsets }}"
-  changed_when: true
 
-- name: "FIREWALL | Dynamically Bind Interfaces to Zones (via UUID)"
-  shell: |
-    set -e
-    # Extract UUID from the terse active connection list (format: Name:UUID:Type:Device)
-    UUID=$(nmcli -t connection show --active | grep ":{{ item.iface }}$" | cut -d: -f2)
-    if [ -z "$UUID" ]; then
-      echo "No active connection found for {{ item.iface }}"
-      exit 1
-    fi
-    # Force the zone on the connection profile
-    nmcli connection modify $UUID connection.zone {{ item.zone }}
-    # Reapply the connection to push the change to the runtime
-    nmcli connection up $UUID
-  loop:
-    - { zone: 'public', iface: 'eth1' }
-    - { zone: 'internal', iface: 'eth0' }
-  changed_when: true
-
-- name: Ensure zones exist
+- name: "FIREWALL | Ensure zones exist (Permanent)"
   ansible.posix.firewalld:
     zone: "{{ item }}"
     state: present
     permanent: yes
   loop: "{{ pstat_zones.keys() | list }}"
 
-- name: Configure and Reconcile Zones
+- name: "FIREWALL | Bind Interfaces to Zones (Permanent)"
+  ansible.posix.firewalld:
+    zone: "{{ item.zone }}"
+    interface: "{{ item.iface }}"
+    state: enabled
+    permanent: yes
+  loop:
+    - { zone: 'public', iface: 'eth1' }
+    - { zone: 'internal', iface: 'eth0' }
+
+- name: Configure and Reconcile Zones (Permanent)
   ansible.builtin.include_tasks: manage_zone.yml
   loop: "{{ pstat_zones.keys() | list }}"
   loop_control:
@@ -70,16 +39,21 @@
   vars:
     zone_services: "{{ pstat_firewall_profiles[pstat_firewall_profile][zone_name] | default([]) }}"
 
+- name: "FIREWALL | Hard Restart - Force read from XMLs"
+  ansible.builtin.systemd:
+    name: firewalld
+    state: restarted
+
+- name: "FIREWALL | Final Sync"
+  ansible.builtin.shell: "firewall-cmd --reload"
+
 - name: Write Firewall Policy Version Breadcrumb
   ansible.builtin.copy:
-    content: "Policy Version: {{ ansible_date_time.date }} | Applied by {{ ansible_env.USER }} | Baseline L2-DirectKernel\n"
+    content: "Policy Version: {{ ansible_date_time.date }} | Applied by {{ ansible_env.USER }} | Baseline L2-Symmetry\n"
     dest: /etc/ansible/firewall_version.txt
     owner: root
     group: root
     mode: '0644'
-
-- name: Final Commit - Force kernel and daemon sync
-  ansible.builtin.shell: "firewall-cmd --reload"
 
 - name: Audit role success
   ansible.builtin.include_role:

@@ -28,6 +28,8 @@ Alternatively, run specific layers:
         - `access-level2-internal`: Open to Campus and Management.
         - `access-level3-restricted`: Open to Management only.
     - **Symmetry**: This allows for rapid fleet-wide security shifts (e.g., moving all nodes to `access-level3-restricted` during an incident) while maintaining granular control.
+    - **Verification**: On AlmaLinux 9, `firewalld` uses native `nftables` sets. **DO NOT** use `ipset list` for verification; it will return empty results. Use `nft list set inet firewalld <set_name>` to verify IPSet population.
+    - **Interface Authority**: NetworkManager profiles override `firewalld` zone assignments. Interfaces are bound to zones via `nmcli` using the connection UUID to ensure persistence.
     - **Ad-Hoc Testing**: To test a stricter policy without modifying permanent variables:
       ```bash
       ansible-playbook -i inventories/pstat.ini deploy_l2_shield.yml --limit <hostname> -e "pstat_firewall_profile=access-level3-restricted"
