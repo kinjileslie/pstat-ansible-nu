@@ -3,21 +3,55 @@
 ## Project Goal
 Modernize Ansible configuration for PSTAT nodes (AlmaLinux 9) using a "Layer Cake" architecture (Atomic Roles -> Explicit Playbooks -> Flat Variables).
 
+## Current Status (as of 2026-05-30)
+### ✅ Implemented & Verified
+- **Layer 1 (Base)**: 
+    - OS updates, NTP, Repos, Base Tools, and Core User Identity.
+    - Verified: All target nodes reach a symmetric baseline.
+- **Layer 2 (The Shield)**: 
+    - **Profile-Based Firewall**: Implemented a tiered trust model (Management -> Campus -> Public).
+    - **Symmetric Binding**: Resolved NetworkManager/Firewalld conflict. Interfaces are now bound via connection UUIDs to ensure persistence across reloads.
+    - **Identity-Based Security**: Shifted from "Service-Allow" to "Rich-Rule" logic for internal and trusted zones. Services (SSH, SNMP) are now explicitly tied to IPSets, eliminating "VLAN leaks" and ensuring that access is granted based on identity rather than just network location.
+    - **Native NFTables**: Verified IPSet population using `nft list set inet firewalld` (bypassing legacy `ipset` tool).
+    - **Fail2Ban**: Integrated as a secondary layer of defense.
+- **Layer 3 (Storage Fortress & Compliance)**:
+    - **LVM Fortress**: "Alta Model" with sovereign volumes on `vdb` (including `/local` absorber).
+    - **XFS Quotas**: "Accounting" model implemented for user/group/project quotas.
+    - **CUI Compliance**: Integrated `RedHatOfficial.rhel9_cui` with a tiered tagging system.
+    - **Lethal Gap Fix**: SSH Ed25519 keys are preserved via `post_tasks` to prevent administrative lockout during FIPS/CUI hardening.
+- **Layer 4 (System Apps/Plumbing)**:
+    - **Capability-Based Model**: Conditional role application via `host_vars`.
+    - **Network Bridge**: "Core-and-Spoke" routing for `seabastion` to bridge 1173/2176 VLANs.
+    - **Routing Persistence**: Used `ipv4.route-metric` to prevent DHCP gateway collisions.
+
+### 🛠 In Progress / Open Items
+- **L4 Identity**: Integration of LDAP/SSSD for centralized authentication.
+- **L4 Observability**: Deployment of monitoring agents (Splunk/PMM).
+- **L5 Apps**: researcher-specific tools and Podman.
+- **CUI Finalization**: Complete the "CUI-Complete" LVM layout (adding `/var/tmp` and `/home` isolation).
+- **MOTD**: Implement "California-grade" legal banners and dynamic announcement system.
+
+## Key Technical Decisions
+- **Symmetry Priority**: Every node must reach the same baseline regardless of the initial image state.
+- **Interface Authority**: NetworkManager UUIDs are the only source of truth for zone binding to prevent "Public Zone Fallback."
+- **Firewall Truth**: Only `nft list set` is trusted for verifying IPSet population on AlmaLinux 9.
+- **Identity Trust**: Provisioning Key model via Cloud-Init (Build Key: KINJI ANSIBLE NU PINK).
+- **LVM Pathing**: Standardized on `/dev/mapper/vg_name-lv_name`.
+
 ## Layer 3 Compliance (CUI)
 Compliance is handled via the `RedHatOfficial.rhel9_cui` role.
 
 ### Tag Mappings
-To ensure consistency, always use these tag combinations for compliance levels:
 - **Tier 1 (Baseline)**: `low_complexity,no_reboot_needed`
 - **Tier 2 (Standard)**: `low_complexity,medium_complexity,no_reboot_needed`
 - **Tier 3 (Strict)**: `low_complexity,medium_complexity,high_complexity`
 
 ### Key Decisions
-- **Root Password**: For CUI compliance (rescue shell access), a random 32-character password is generated and set during the `pre_tasks` of `deploy_l3_compliance.yml`. This is not stored (Immutable Infrastructure approach).
-- **DNF Automatic**: Configured to `security` updates only to prevent accidental version jumps.
-- **Verification**: Use `oscap` locally on the target node to generate HTML reports.
+- **Root Password**: Random 32-char password set during `pre_tasks` for rescue access; not stored.
+- **DNF Automatic**: Set to `security` updates only.
+- **Verification**: Use `oscap` for HTML reports.
 
 ## Storage Strategy
-- **Alta Model**: `/local` (70GB) on `vdb` as a primary absorber.
-- **Surgical LVM**: Use `lvg` and `lvol` to avoid external collection dependencies.
-- **XFS Quotas**: Implement "Accounting" (reporting) via `rootflags=uquota,gquota`.
+- **Alta Model**: `/local` absorber volume on `vdb`.
+- **Surgical LVM**: Standardized naming conventions (`lvg`, `lvol`).
+- **XFS Quotas**: Accounting (reporting) rather than enforcement.

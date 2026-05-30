@@ -13,14 +13,43 @@
   loop: "{{ [pstat_zones[zone_name].source] if (pstat_zones[zone_name].source is defined and pstat_zones[zone_name].source is not none) else pstat_zones[zone_name].sources | default([]) }}"
   when: (pstat_zones[zone_name].source is defined and pstat_zones[zone_name].source is not none) or pstat_zones[zone_name].sources is defined
 
-- name: Apply Zone Services
+- name: Apply Zone Services (Global Allow)
   ansible.posix.firewalld:
     zone: "{{ zone_name }}"
     service: "{{ item }}"
     state: enabled
     permanent: yes
-  loop: "{{ zone_services }}"
-  when: zone_services is defined
+  loop: "{{ zone_services | default([]) }}"
+  when: zone_services is defined and zone_name == 'public' # Only allow global services on public if explicitly needed
+
+- name: "FIREWALL | Calculate Expected Rich Rules"
+  set_fact:
+    expected_rich_rules: "{{ (zone_services | default([])) | map('regex_replace', '^', 'rule family=\"ipv4\" source ipset=\"' + (pstat_zones[zone_name].source | replace('ipset:', '') if pstat_zones[zone_name].source is defined else (pstat_zones[zone_name].sources[0] | replace('ipset:', '') if pstat_zones[zone_name].sources is defined and pstat_zones[zone_name].sources | length > 0 else '')) + '\" service name=\"') | map('regex_replace', '$', '\" accept') | list }}"
+  when: 
+    - zone_name != 'public'
+    - (pstat_zones[zone_name].source is defined or pstat_zones[zone_name].sources is defined)
+
+- name: "FIREWALL | Prune Obsolete Rich Rules"
+  shell: |
+    set -e
+    current_rules=$(firewall-cmd --permanent --zone={{ zone_name }} --list-rich-rules)
+    while read -r rule; do
+      if [ -n "$rule" ] && [[ ! " {{ expected_rich_rules | join(' ') }}" =~ "$rule" ]]; then
+        firewall-cmd --permanent --zone={{ zone_name }} --remove-rich-rule="$rule"
+      fi
+    done <<< "$current_rules"
+  when: 
+    - zone_name != 'public'
+    - (pstat_zones[zone_name].source is defined or pstat_zones[zone_name].sources is defined)
+  changed_when: false # Simplified for now, but could be tracked
+
+- name: Apply Restricted Services (Rich Rules)
+  ansible.builtin.shell: "firewall-cmd --permanent --zone={{ zone_name }} --add-rich-rule='{{ item }}'"
+  loop: "{{ expected_rich_rules | default([]) }}"
+  when: 
+    - zone_name != 'public'
+    - expected_rich_rules is defined
+  changed_when: true
 
 - name: Prune Unauthorized Services from Zone
   # Get all currently enabled services in this zone to find what needs to be removed

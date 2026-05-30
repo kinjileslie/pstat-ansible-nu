@@ -30,6 +30,7 @@ Alternatively, run specific layers:
     - **Symmetry**: This allows for rapid fleet-wide security shifts (e.g., moving all nodes to `access-level3-restricted` during an incident) while maintaining granular control.
     - **Verification**: On AlmaLinux 9, `firewalld` uses native `nftables` sets. **DO NOT** use `ipset list` for verification; it will return empty results. Use `nft list set inet firewalld <set_name>` to verify IPSet population.
     - **Interface Authority**: NetworkManager profiles override `firewalld` zone assignments. Interfaces are bound to zones via `nmcli` using the connection UUID to ensure persistence.
+    - **Identity-Based Access**: To prevent "VLAN Leaks," the firewall uses **Rich Rules** rather than general zone services for internal/trusted zones. This ensures that services (like SSH) are only accessible to IPs defined in the corresponding IPSet, regardless of which interface is used.
     - **Ad-Hoc Testing**: To test a stricter policy without modifying permanent variables:
       ```bash
       ansible-playbook -i inventories/pstat.ini deploy_l2_shield.yml --limit <hostname> -e "pstat_firewall_profile=access-level3-restricted"
@@ -80,15 +81,31 @@ ansible-playbook -i inventories/pstat.ini deploy_l4_system_apps.yml --limit <hos
 - **Adding Jump Hosts**: Add new IPs to `group_vars/pstat.yml` under `pstat_mgmt_ips`. This automatically updates both the Firewall and Fail2Ban ignore lists.
 - **Customizing Roles**: All logic is atomic. To change a specific feature, edit the role in `roles/` and run the corresponding `deploy_lX.yml` playbook.
 
-### 📡 Connectivity & Jump Path
-**Path**: `Local` $\rightarrow$ `ctrl1` (Primary) / `ctrl2` (Backup) $\rightarrow$ `Target`.
-**Reasoning**: Simplified from the legacy nested-jump chain (`ufo-race` $\rightarrow$ `ctrl1.node`) to reduce latency and eliminate complex authentication failures.
+### 📖 Engineer's Notebook: Troubleshooting the Shield
 
-**Critical Connectivity Rule**:
-To avoid triggering `maxauthtries` limits on target nodes (caused by the SSH Agent offering incorrect identity keys), all manual and automated SSH connections **MUST** use the `IdentitiesOnly=yes` option:
-```bash
-ssh -o IdentitiesOnly=yes -i /path/to/build_key -l almalinux -J ctrl1 <target>
-```
+This project encountered significant "tooling friction" during the L2 rollout. To avoid the "Nuke and Pave" trap, follow this verification methodology when system tools appear to be "lying":
+
+#### 1. The "Anti-Nuke" Protocol
+Before deciding a tool is broken and pivoting to a custom implementation:
+- **Strip Abstractions**: Stop using Ansible/scripts. Run commands manually in a raw shell.
+- **Primitive Syntax**: Avoid modern flags (e.g., `nmcli -g` or `-f`). Use the most basic positional arguments and parse with `grep`/`cut`.
+- **Verify State, Not Return Code**: A "success" from a daemon (`firewall-cmd`) only means the daemon updated its database. Always verify the **Kernel State** (the actual truth).
+
+#### 2. The `nmcli` Compatibility Trap
+- **The Issue**: Certain `nmcli` versions reject field-specific flags (`-g`, `-f`) as "invalid fields."
+- **The Verified Path**: Use "Primitive Terse" mode for UUID discovery:
+  `nmcli -t connection show --active | grep ":<iface>$" | cut -d: -f2`
+- **The Binding Sequence**: `UUID Discovery` $\rightarrow$ `nmcli connection modify <UUID> connection.zone <zone>` $\rightarrow$ `nmcli connection up <UUID>`.
+
+#### 3. Native `nftables` vs. Legacy `ipset`
+- **The Issue**: Using `ipset list` on AlmaLinux 9 returns empty results, leading to the false conclusion that the firewall is not populated.
+- **The Truth**: AlmaLinux 9 uses native `nftables` sets. The `ipset` binary talks to a different kernel module that `firewalld` no longer uses.
+- **The Source of Truth**: Always use `nft list set inet firewalld <set_name>` to verify IPSet population.
+
+#### 4. Interface Authority (The "Gravity" Problem)
+- **The Issue**: `firewall-cmd --zone=... --add-interface=...` often fails to persist across reloads.
+- **The Truth**: NetworkManager connection profiles (`.nmconnection`) override `firewalld` runtime assignments.
+- **The Fix**: You must modify the specific **UUID** of the active NetworkManager profile to change the zone.
 
 ## 🛡️ Compliance (Layer 3)
 Compliance is managed as an optional overlay. Use `deploy_l3.3_compliance.yml` with the following tags:
