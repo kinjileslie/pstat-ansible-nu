@@ -14,22 +14,30 @@
     dest: "/etc/firewalld/ipsets/{{ item.name }}.xml"
   loop: "{{ pstat_ipsets }}"
 
+- name: "FIREWALL | Dynamically Bind Interfaces to Zones (via UUID)"
+  shell: |
+    set -e
+    # Extract UUID using the primitive terse format that is verified to work on this OS
+    UUID=$(nmcli -t connection show --active | grep ":{{ item.iface }}$" | cut -d: -f2)
+    if [ -z "$UUID" ]; then
+      echo "No active connection found for {{ item.iface }}"
+      exit 1
+    fi
+    # Force the zone on the connection profile
+    nmcli connection modify $UUID connection.zone {{ item.zone }}
+    # Reapply the connection to push the change to the runtime
+    nmcli connection up $UUID
+  loop:
+    - { zone: 'public', iface: 'eth1' }
+    - { zone: 'internal', iface: 'eth0' }
+  changed_when: true
+
 - name: "FIREWALL | Ensure zones exist (Permanent)"
   ansible.posix.firewalld:
     zone: "{{ item }}"
     state: present
     permanent: yes
   loop: "{{ pstat_zones.keys() | list }}"
-
-- name: "FIREWALL | Bind Interfaces to Zones (Permanent)"
-  ansible.posix.firewalld:
-    zone: "{{ item.zone }}"
-    interface: "{{ item.iface }}"
-    state: enabled
-    permanent: yes
-  loop:
-    - { zone: 'public', iface: 'eth1' }
-    - { zone: 'internal', iface: 'eth0' }
 
 - name: Configure and Reconcile Zones (Permanent)
   ansible.builtin.include_tasks: manage_zone.yml
