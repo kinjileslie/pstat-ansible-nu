@@ -21,13 +21,18 @@ ansible-playbook -i inventories/pstat.ini test_l1_safe.yml --limit <hostname>
 Alternatively, run specific layers:
 - **Layer 1 (Base)**: `ansible-playbook -i inventories/pstat.ini deploy_l1_base.yml --limit <hostname>`
 - **Layer 2 (Shield)**: Perimeter security. Now utilizes a **Profile-Based Firewall** model:
-    - **Firewall Profiles**: Instead of individual toggles, nodes are assigned an access level in `host_vars` (e.g., `access-level3-restricted`).
+    - **Firewall Profiles**: Instead of individual toggles, nodes are assigned an access level in `host_vars` or via command-line overrides.
     - **Tiered Trust**: Policies are applied across four distinct zones: `management` (Fortress), `campus` (Internal), `public` (Wild), and functional zones (`monitoring`, `backup`).
     - **Access Gradient**:
         - `access-level1-public`: Open to the world (SSH enabled on public zone).
         - `access-level2-internal`: Open to Campus and Management.
         - `access-level3-restricted`: Open to Management only.
     - **Symmetry**: This allows for rapid fleet-wide security shifts (e.g., moving all nodes to `access-level3-restricted` during an incident) while maintaining granular control.
+    - **Ad-Hoc Testing**: To test a stricter policy without modifying permanent variables:
+      ```bash
+      ansible-playbook -i inventories/pstat.ini deploy_l2_shield.yml --limit <hostname> -e "pstat_firewall_profile=access-level3-restricted"
+      ```
+      *Note: To revert to the baseline, simply run the playbook without the `-e` flag.*
 
 ### 2. Verifying Node State
 To check if a node has been correctly provisioned and see the audit trail:

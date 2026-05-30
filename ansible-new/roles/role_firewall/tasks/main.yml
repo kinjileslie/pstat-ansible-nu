@@ -32,11 +32,28 @@
     - item != 'public'
     - item not in ['block', 'dmz', 'drop', 'external', 'home', 'internal', 'nm-shared', 'trusted', 'work']
 
-- name: Create IP sets from templates
-  ansible.builtin.template:
-    src: ipset.xml.j2
-    dest: "/etc/firewalld/ipsets/{{ item.name }}.xml"
+- name: "FIREWALL | Populate IPSets directly in Kernel"
+  shell: "ipset create {{ item.name }} {{ item.type }} 2>/dev/null || true; for ip in {{ item.ips | join(' ') }}; do ipset add {{ item.name }} $ip 2>/dev/null || true; done"
   loop: "{{ pstat_ipsets }}"
+  changed_when: true
+
+- name: "FIREWALL | Dynamically Bind Interfaces to Zones (via UUID)"
+  shell: |
+    set -e
+    # Extract UUID from the terse active connection list (format: Name:UUID:Type:Device)
+    UUID=$(nmcli -t connection show --active | grep ":{{ item.iface }}$" | cut -d: -f2)
+    if [ -z "$UUID" ]; then
+      echo "No active connection found for {{ item.iface }}"
+      exit 1
+    fi
+    # Force the zone on the connection profile
+    nmcli connection modify $UUID connection.zone {{ item.zone }}
+    # Reapply the connection to push the change to the runtime
+    nmcli connection up $UUID
+  loop:
+    - { zone: 'public', iface: 'eth1' }
+    - { zone: 'internal', iface: 'eth0' }
+  changed_when: true
 
 - name: Ensure zones exist
   ansible.posix.firewalld:
@@ -51,18 +68,17 @@
   loop_control:
     loop_var: zone_name
   vars:
-    # Map the current profile's services for the specific zone being processed
     zone_services: "{{ pstat_firewall_profiles[pstat_firewall_profile][zone_name] | default([]) }}"
 
 - name: Write Firewall Policy Version Breadcrumb
   ansible.builtin.copy:
-    content: "Policy Version: {{ ansible_date_time.date }} | Applied by {{ ansible_env.USER }} | Baseline L2-MVP\n"
+    content: "Policy Version: {{ ansible_date_time.date }} | Applied by {{ ansible_env.USER }} | Baseline L2-DirectKernel\n"
     dest: /etc/ansible/firewall_version.txt
     owner: root
     group: root
     mode: '0644'
 
-- name: Reload firewalld to apply changes
+- name: Final Commit - Force kernel and daemon sync
   ansible.builtin.shell: "firewall-cmd --reload"
 
 - name: Audit role success

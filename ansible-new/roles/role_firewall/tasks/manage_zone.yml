@@ -5,14 +5,13 @@
   loop_control:
     loop_var: ipset_name
   when: 
-    - pstat_zones[zone_name].sources is defined
-    - "'ipset:' + ipset_name not in pstat_zones[zone_name].sources"
+    - (pstat_zones[zone_name].source is defined or pstat_zones[zone_name].sources is defined)
   ignore_errors: yes
 
 - name: Apply Zone Sources
   ansible.builtin.shell: "firewall-cmd --permanent --zone={{ zone_name }} --add-source={{ item }}"
-  loop: "{{ pstat_zones[zone_name].sources | default([]) }}"
-  when: pstat_zones[zone_name].sources is defined
+  loop: "{{ [pstat_zones[zone_name].source] if (pstat_zones[zone_name].source is defined and pstat_zones[zone_name].source is not none) else pstat_zones[zone_name].sources | default([]) }}"
+  when: (pstat_zones[zone_name].source is defined and pstat_zones[zone_name].source is not none) or pstat_zones[zone_name].sources is defined
 
 - name: Apply Zone Services
   ansible.posix.firewalld:
