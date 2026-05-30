@@ -150,5 +150,9 @@ To maintain system stability and support the "Layer Cake" architecture, the foll
     - Implement a "Dynamic Announcement" system: 
         - Use `/etc/issue` as the static legal "No Trespassing" sign.
         - Use `/etc/motd` as a dynamic bulletin board for maintenance alerts, managed via a dedicated `deploy_announcement.yml` playbook.
+    - **[OPEN] Firewall Policy Validation**: Perform rigorous cross-node testing for all three access levels (`public`, `internal`, `restricted`).
+        - Verify `sauza` (Campus) can still access `internal` zone services.
+        - Verify `flanker`/`ctrl1` (Management) can still access `trusted` zone services under all levels.
+        - Confirm "Total Lockout" on `access-level3-restricted` for all non-management IPs.
     - **[OPEN] SSH `maxauthtries` Recovery**: Document a reproducible method to clear an IP from the target's fail-list after hitting the maximum authentication attempts limit.
     - [ON HOLD] Layer 4 (Plumbing): Identity (LDAP/SSSD) and Monitoring.
