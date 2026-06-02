@@ -10,6 +10,7 @@ ansible_ssh_common_args: '-i /home/support/.ssh/ansible-nu-pink_ed25519 -o Ident
 # 2. Identity & Access
 # Defined Public Keys (Sovereign Truth)
 pstat_key_nu_pink: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAMdTvGYguI/h3pfZEqO1ZS5Lub0h2aJsJiyooiL+cbl KINJI ANSIBLE NU PINK'
+pstat_key_nu_gold: 'ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBLJPjUjzPfOQJFGj6rKJ0tWDPpxwJWLs9O3efR/9NarwFAc41pkD/F/x41T0z+iEy92+HD1d5q542oKxDuDxrcs= KINJI ANSIBLE NU GOLD'
 pstat_key_bobby_rsa: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC0+GqBqJFni9JPgGFsiyOyOewzekPllqoQEMHhMY7ntasnRPUEzOX50RkOhpI40PRcFQz0r8ZFbl1HX8wbg9kBfEj5xOResI34y/5ZU+RwXLT9lrjikFP+MjnbZPJjhDrm6rZJfJ/UIiiAbbEsBpY3NyM3u1MNhAPD39MEsbcmbgov07HE3PgsxzAbWlFmUbt0F3nVMZRAWQ3yZITSMZkkdBHQxV8LjdM1HMb3GyE7vc5vlmOyLVawM7fQWGUXl10/yeAiddm8Bin1OOiQN3YhW1ZvinfIS2bZ2+i65qI0zQ7lNOKI/48w43eo/zPXyRUsUaGzQoFpPcnIj+UbYlOd root@bob.aristotle.ucsb.edu'
 pstat_key_bobby_ecdsa: 'ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCngyHXN9ZXJanXsya27/r+DoC6qYEZ4wLcL7EVQ5YoatD77zbxXTWsz5D/wMEIWvoQHhl1HZDGRrvr5r+UKiQ4= root@bobby.lsit.ucsb.edu'
 pstat_key_bobby_ed25519: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEPPPGTmkqb81IwtNvVFFVXEMOkJxCVhvkf/+BlAVlGw root@bobby.lsit.ucsb.edu'
@@ -18,6 +19,7 @@ pstat_key_kinji_red: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHoZmhYCEtQ58uWzUFTFNW
 # Master List of Administrative Keys (for legacy roles/audit)
 administrative_keys:
   - "{{ pstat_key_nu_pink }}"
+  - "{{ pstat_key_nu_gold }}"
   - "{{ pstat_key_bobby_rsa }}"
   - "{{ pstat_key_bobby_ecdsa }}"
   - "{{ pstat_key_bobby_ed25519 }}"
@@ -105,3 +107,31 @@ pstat_quota_mounts:
   - /tmp
   - /var/log
   - /var/log/audit
+
+# 9. Crypto Policy Control
+# Set to 'false' to allow modern algorithms (Ed25519) for administrative access.
+# Set to 'true' only for nodes requiring strict FIPS compliance.
+configure_crypto_policy: false
+var_system_crypto_policy: "DEFAULT"
+
+# 10. Identity Registry
+# Maps logical identity roles to physical files on the management host.
+# Nu-Pink: Modern, fast, deterministic. Use for all standard operations.
+# Nu-Gold: FIPS-compliant ECDSA. Use ONLY for nodes with 'configure_crypto_policy: true'.
+pstat_identity_registry:
+  nu_pink: 
+    path: "/home/kinji/.ssh/ansible-nu-pink_ed25519"
+    policy: "DEFAULT"
+    description: "Standard Administrative Build Key"
+  nu_gold: 
+    path: "/home/kinji/.ssh/ansible-nu-gold_ecdsa"
+    policy: "FIPS"
+    description: "FIPS-Compliant Management Key"
+
+# The Active Build Key (Logical Name)
+# Default is Nu-Pink. Override in host_vars if the node is FIPS-hardened.
+pstat_active_build_key: "nu_pink"
+
+# Ansible Engine Binding
+# Dynamically selects the path based on the active build key registry entry.
+ansible_ssh_private_key_file: "{{ pstat_identity_registry[pstat_active_build_key].path }}"

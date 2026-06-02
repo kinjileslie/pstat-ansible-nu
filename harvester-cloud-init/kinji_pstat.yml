@@ -10,6 +10,7 @@ packages:
 
 ssh_authorized_keys:
   - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAMdTvGYguI/h3pfZEqO1ZS5Lub0h2aJsJiyooiL+cbl KINJI ANSIBLE NU PINK'
+  - 'ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBLJPjUjzPfOQJFGj6rKJ0tWDPpxwJWLs9O3efR/9NarwFAc41pkD/F/x41T0z+iEy92+HD1d5q542oKxDuDxrcs= KINJI ANSIBLE NU GOLD'
 
 runcmd:
   - systemctl enable --now qemu-guest-agent.service

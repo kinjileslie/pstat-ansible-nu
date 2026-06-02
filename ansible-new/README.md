@@ -67,6 +67,12 @@ These layers follow an **Explicit Orchestration** model. Instead of hidden boole
         - **Persistence Strategy**: Uses `ipv4.route-metric` to anchor the Public Interface (`eth1`) as the primary gateway (Metric 50) while allowing the Internal Interface (`eth0`) to exist as a secondary (Metric 100+).
         - **Stability**: This ensures that even when DHCP pushes competing gateways, the "Management Path" remains open and survives reboots.
     - **Example**: A node marked as `is_network_bridge: true` will automatically receive the "Core-and-Spoke" routing configuration to bridge the 1173/2176 VLANs.
+    - **Identity & Observability**: [TODO] Integrate LDAP/SSSD and Monitoring agents.
+    - **Symmetry Cleanup**: [TODO] Remove the "Emergency" `PubkeyAcceptedAlgorithms` override from L3 compliance playbooks once the `configure_crypto_policy` toggle is verified fleet-wide.
+    - **L4-Tuning**: [TODO] Remove "Canary" debug prints from `role_network_bridge`.
+    - **Identity Evolution (Key-Duo)**: [PLANNING] Transition from a single build key to a "Polyglot" identity model.
+        - Use `ansible_ssh_private_key_file` in `host_vars` to dynamically select between Ed25519 (Nu-Pink) for standard nodes and ECDSA (Nu-Gold) for FIPS-compliant nodes.
+        - This removes the bottleneck of a hardcoded key in `ansible.cfg` and prevents `MaxAuthTries` lockouts.
 - **L5 (User Apps)**: Researcher tools (e.g., RStudio, Podman).
 
 **Usage**:
@@ -154,5 +160,6 @@ To maintain system stability and support the "Layer Cake" architecture, the foll
         - Verify `sauza` (Campus) can still access `internal` zone services.
         - Verify `flanker`/`ctrl1` (Management) can still access `trusted` zone services under all levels.
         - Confirm "Total Lockout" on `access-level3-restricted` for all non-management IPs.
+    - **[OPEN] SSSD/KCM Log Error**: Resolve `sssd_kcm` failure to open `/var/log/sssd/sssd_kcm.log` (No such file or directory) on `seabastion`.
     - **[OPEN] SSH `maxauthtries` Recovery**: Document a reproducible method to clear an IP from the target's fail-list after hitting the maximum authentication attempts limit.
     - [ON HOLD] Layer 4 (Plumbing): Identity (LDAP/SSSD) and Monitoring.

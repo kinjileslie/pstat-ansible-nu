@@ -1,0 +1,6 @@
+# forger42 - FIPS Hardened Node
+# This node is designated for strict compliance.
+pstat_firewall_profile: "access-level3-restricted"
+configure_crypto_policy: true
+var_system_crypto_policy: "FIPS"
+pstat_active_build_key: "nu_gold"

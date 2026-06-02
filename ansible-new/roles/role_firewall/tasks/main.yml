@@ -30,6 +30,7 @@
   loop:
     - { zone: 'public', iface: 'eth1' }
     - { zone: 'internal', iface: 'eth0' }
+  when: item.iface in ansible_interfaces
   changed_when: true
 
 - name: "FIREWALL | Ensure zones exist (Permanent)"
