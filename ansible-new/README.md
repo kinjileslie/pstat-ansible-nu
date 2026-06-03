@@ -73,6 +73,8 @@ These layers follow an **Explicit Orchestration** model. Instead of hidden boole
     - **Identity Evolution (Key-Duo)**: [PLANNING] Transition from a single build key to a "Polyglot" identity model.
         - Use `ansible_ssh_private_key_file` in `host_vars` to dynamically select between Ed25519 (Nu-Pink) for standard nodes and ECDSA (Nu-Gold) for FIPS-compliant nodes.
         - This removes the bottleneck of a hardcoded key in `ansible.cfg` and prevents `MaxAuthTries` lockouts.
+    - **Management Perimeter**: [TODO] Finalize and add all legitimate Bastion/Jump host IPs to the `management` IPSet.
+    - **VLAN Trust Model**: [TODO] Decide on the trust level for the 1173 network (e.g., "Full Trust" vs. "Restricted Service Access") and implement in the firewall policy.
 - **L5 (User Apps)**: Researcher tools (e.g., RStudio, Podman).
 
 **Usage**:

@@ -5,7 +5,7 @@
 # 1. Connectivity & Orchestration
 ansible_user: almalinux
 ansible_become: yes
-ansible_ssh_common_args: '-i /home/support/.ssh/ansible-nu-pink_ed25519 -o IdentitiesOnly=yes'
+ansible_ssh_common_args: '-i /home/kinji/.ssh/ansible-nu-pink_ed25519 -o IdentitiesOnly=yes'
 
 # 2. Identity & Access
 # Defined Public Keys (Sovereign Truth)
@@ -57,6 +57,8 @@ pstat_mgmt_ips:
   - 128.111.126.115  # dlr.lsit.ucsb.edu
   - 128.111.90.54    # unifi.lscg.ucsb.edu
   - 128.111.219.20   # sauza.pstat.ucsb.edu
+  - 10.2.17.199      # seabastion (Internal)
+  - 169.231.231.85   # seabastion (Management)
 
 # 4. Backup Infrastructure
 pstat_backup_ips:
