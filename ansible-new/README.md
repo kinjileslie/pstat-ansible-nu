@@ -68,7 +68,7 @@ These layers follow an **Explicit Orchestration** model. Instead of hidden boole
         - **Stability**: This ensures that even when DHCP pushes competing gateways, the "Management Path" remains open and survives reboots.
     - **Example**: A node marked as `is_network_bridge: true` will automatically receive the "Core-and-Spoke" routing configuration to bridge the 1173/2176 VLANs.
     - **Identity & Observability**: [TODO] Integrate LDAP/SSSD and Monitoring agents.
-    - **Symmetry Cleanup**: [TODO] Remove the "Emergency" `PubkeyAcceptedAlgorithms` override from L3 compliance playbooks once the `configure_crypto_policy` toggle is verified fleet-wide.
+    - **Symmetry Cleanup**: [TODO] Remove the "Emergency" `PubkeyAcceptedAlgorithms` override from L3 compliance playbooks once the `is_fips_enabled` toggle is verified fleet-wide.
     - **L4-Tuning**: [TODO] Remove "Canary" debug prints from `role_network_bridge`.
     - **Identity Evolution (Key-Duo)**: [PLANNING] Transition from a single build key to a "Polyglot" identity model.
         - Use `ansible_ssh_private_key_file` in `host_vars` to dynamically select between Ed25519 (Nu-Pink) for standard nodes and ECDSA (Nu-Gold) for FIPS-compliant nodes.
@@ -98,7 +98,6 @@ ansible-playbook -i inventories/pstat.ini deploy_l4_system_apps.yml --limit <hos
 - **Adding Jump Hosts**: Add new IPs to `group_vars/pstat.yml` under `pstat_mgmt_ips`. This automatically updates both the Firewall and Fail2Ban ignore lists.
 - **Customizing Roles**: All logic is atomic. To change a specific feature, edit the role in `roles/` and run the corresponding `deploy_lX.yml` playbook.
 - **Key Path Fragility**: SSH private key paths in `pstat_identity_registry` are currently hardcoded to specific home directories. This will break if the management user or host changes. Needs transition to environment variables or project-relative paths.
-- **SSH Stability**: Persistent disconnects and timeouts are still occurring from `seabastion` to target nodes, despite `systemd-linger` being enabled. Investigation into TCP KeepAlives and SSH Server timeout settings is required.
 
 ### 📖 Engineer's Notebook: Troubleshooting the Shield
 
@@ -125,6 +124,41 @@ Before deciding a tool is broken and pivoting to a custom implementation:
 - **The Issue**: `firewall-cmd --zone=... --add-interface=...` often fails to persist across reloads.
 - **The Truth**: NetworkManager connection profiles (`.nmconnection`) override `firewalld` runtime assignments.
 - **The Fix**: You must modify the specific **UUID** of the active NetworkManager profile to change the zone.
+
+## 🚫 SSH Connection Stability (The "Idle Timeout" Mystery)
+
+### The Problem
+SSH sessions and sshfs mounts from `seabastion` to target nodes are disconnecting after ~45-60 minutes of idle time, despite `systemd-linger` and `ControlMaster` being enabled.
+
+### Investigation Findings
+1. **CUI `IdleActionSec=1800` NOT Applied**: The CUI role's `var_logind_session_timeout: '1800'` setting is not appearing in `/etc/systemd/logind.conf` on `seabastion`. Verified via `systemd-analyze cat-config`.
+2. **SSH Keepalive Configurations**:
+   - Server-side (`ClientAliveInterval 0`): Disabled (seabastion doesn't send keepalives)
+   - Client-side (`ServerAliveInterval 300`): Enabled on `flanker` (client sends every 5 min)
+3. **sshfs "Ghost Mounts"**: Mounts show as active in `df -h` but are actually dead after idle, confirming network-level disconnect.
+4. **Timing**: Disconnects occur after ~45-60 minutes, which is not the default 10-minute timeout or the CUI 30-minute timeout.
+
+### Root Cause
+Network firewall/NAT device between `seabastion` and target nodes is killing idle TCP connections after ~45-60 minutes without sending graceful FIN packets. The client/server don't realize the connection is dead until they try to use it.
+
+### Proposed Solution
+Add server-side SSH keepalives to `seabastion`:
+```bash
+# Create keepalive config
+echo "ClientAliveInterval 30" | sudo tee /etc/ssh/sshd_config.d/99-keepalive.conf
+echo "ClientAliveCountMax 3" | sudo tee -a /etc/ssh/sshd_config.d/99-keepalive.conf
+
+# Reload SSHD
+sudo systemctl reload sshd
+
+# Verify
+sshd -T | grep -i clientalive
+```
+
+This makes `seabastion` send a keepalive packet every 30 seconds to the client, which the firewall will see as active traffic, preventing it from killing the connection.
+
+### Status
+Investigation complete, proposed solution documented. Awaiting implementation and verification.
 
 ## 🛡️ Compliance (Layer 3)
 Compliance is managed as an optional overlay. Use `deploy_l3.3_compliance.yml` with the following tags:

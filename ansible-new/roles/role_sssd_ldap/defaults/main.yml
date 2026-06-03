@@ -1,0 +1,33 @@
+---
+# role_sssd_ldap defaults
+# SSSD configuration for UCSB LDAP (collaborate.ucsb.edu)
+
+# LDAP Servers
+pstat_ldap_uris:
+  - ldap://ldap1-ab.collaborate.ucsb.edu/
+  - ldap://ldap2-ab.collaborate.ucsb.edu/
+
+# LDAP Search Base
+pstat_ldap_search_base: "dc=collaborate,dc=ucsb,dc=edu"
+
+# TLS Settings
+pstat_ldap_id_use_start_tls: true
+pstat_ldap_tls_cacertdir: "/etc/openldap/certs"
+pstat_ldap_tls_reqcert: "allow"
+
+# SSSD Configuration
+pstat_sssd_domains:
+  - collaborate.ucsb.edu
+
+pstat_sssd_services:
+  - nss
+  - pam
+  - autofs
+  - ssh
+
+# Home Directory Configuration
+pstat_sssd_override_homedir: "/home/%u"
+
+# Authentication
+pstat_sssd_cache_credentials: true
+pstat_sssd_enumerate: true

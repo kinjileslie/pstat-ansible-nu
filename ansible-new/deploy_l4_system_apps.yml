@@ -18,6 +18,12 @@
       when: is_network_bridge | default(false)
       tags: [role_network_bridge, network_bridge]
 
+    - name: "CAPABILITY | LDAP/SSSD Identity Management"
+      include_role:
+        name: role_sssd_ldap
+      when: is_ldap_enabled | default(false)
+      tags: [role_sssd_ldap, ldap_sssd, identity_management]
+
     - name: "CAPABILITY | Other L4 Services"
       debug:
         msg: "Other L4 services (PMM, Splunk, etc.) are currently on hold."

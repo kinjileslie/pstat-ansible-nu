@@ -1,6 +1,7 @@
 ---
 # Host variables for the SeaBastion bridge node
 is_network_bridge: true
+is_ldap_enabled: false  # Management host - not a user login node
 
 # Interface on the 1173 / Isolated network
 bridge_internal_iface: "eth0"

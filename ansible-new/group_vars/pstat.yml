@@ -114,25 +114,28 @@ pstat_quota_mounts:
 # Set to 'false' to allow modern algorithms (Ed25519) for administrative access.
 # Set to 'true' only for nodes requiring strict FIPS compliance.
 configure_crypto_policy: false
+# Alias for FIPS toggle (maintains backward compatibility)
+is_fips_enabled: "{{ configure_crypto_policy | default(false) }}"
 var_system_crypto_policy: "DEFAULT"
 
 # 10. Identity Registry
 # Maps logical identity roles to physical files on the management host.
 # Nu-Pink: Modern, fast, deterministic. Use for all standard operations.
-# Nu-Gold: FIPS-compliant ECDSA. Use ONLY for nodes with 'configure_crypto_policy: true'.
+# Nu-Gold: FIPS-compliant ECDSA. Use ONLY for nodes with 'is_fips_enabled: true'.
+# NOTE: Paths relative to SSH config directory or absolute from management host.
 pstat_identity_registry:
   nu_pink: 
-    path: "/home/kinji/.ssh/ansible-nu-pink_ed25519"
+    path: "~/.ssh/ansible-nu-pink_ed25519"
     policy: "DEFAULT"
     description: "Standard Administrative Build Key"
   nu_gold: 
-    path: "/home/kinji/.ssh/ansible-nu-gold_ecdsa"
+    path: "~/.ssh/ansible-nu-gold_ecdsa"
     policy: "FIPS"
     description: "FIPS-Compliant Management Key"
 
 # The Active Build Key (Logical Name)
-# Default is Nu-Pink. Override in host_vars if the node is FIPS-hardened.
-pstat_active_build_key: "nu_pink"
+# Default is Nu-Pink. Switch to Nu-Gold for FIPS-hardened nodes.
+pstat_active_build_key: "{{ is_fips_enabled | ternary('nu_gold', 'nu_pink') }}"
 
 # Ansible Engine Binding
 # Dynamically selects the path based on the active build key registry entry.

@@ -34,6 +34,9 @@
       changed_when: true
 
   vars:
+    # --- FIPS Toggle (renamed from configure_crypto_policy) ---
+    is_fips_enabled: "{{ configure_crypto_policy | default(false) }}"
+    
     # --- CUI Master Switches (from local testing on gammon/poisson) ---
     # This acts as the master "ON" switch for the OpenSCAP logic
     ansible_compliance_cleanup: true

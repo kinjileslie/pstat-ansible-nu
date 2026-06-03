@@ -1,0 +1,99 @@
+---
+# role_sssd_ldap tasks
+# SSSD configuration for UCSB LDAP integration
+
+- name: Install SSSD packages
+  package:
+    name:
+      - sssd
+      - sssd-ldap
+      - sssd-tools
+      - oddjob-mkhomedir
+      - openldap-clients
+    state: present
+
+- name: Enable oddjobd service
+  service:
+    name: oddjobd
+    state: started
+    enabled: true
+
+- name: Configure authselect for SSSD with mkhomedir
+  command: authselect select sssd with-mkhomedir --force
+  changed_when: false
+
+- name: Create SSSD configuration directory
+  file:
+    path: /etc/sssd
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Deploy SSSD configuration
+  copy:
+    content: |
+      [sssd]
+      config_file_version = 2
+      services = {{ pstat_sssd_services | join(', ') }}
+      domains = {{ pstat_sssd_domains | join(', ') }}
+
+      {% for domain in pstat_sssd_domains %}
+      [domain/{{ domain }}]
+      id_provider = ldap
+      auth_provider = ldap
+      chpass_provider = ldap
+      ldap_uri = {{ pstat_ldap_uris | join(',') }}
+      ldap_search_base = {{ pstat_ldap_search_base }}
+      ldap_id_use_start_tls = {{ pstat_ldap_id_use_start_tls | lower }}
+      ldap_tls_cacertdir = {{ pstat_ldap_tls_cacertdir }}
+      cache_credentials = {{ pstat_sssd_cache_credentials | lower }}
+      ldap_tls_reqcert = {{ pstat_ldap_tls_reqcert }}
+      enumerate = {{ pstat_sssd_enumerate | lower }}
+      override_homedir = {{ pstat_sssd_override_homedir }}
+      {% endfor %}
+    dest: /etc/sssd/sssd.conf
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Set SSSD configuration permissions
+  file:
+    path: /etc/sssd/sssd.conf
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Configure SSH for SSSD keys
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?AuthorizedKeysCommand'
+    line: 'AuthorizedKeysCommand /usr/bin/sss_ssh_authorizedkeys'
+    state: present
+    backup: yes
+
+- name: Configure SSH key command user
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?AuthorizedKeysCommandUser'
+    line: 'AuthorizedKeysCommandUser root'
+    state: present
+    backup: yes
+
+- name: Ensure /home directory exists
+  file:
+    path: /home
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Start SSSD service
+  service:
+    name: sssd
+    state: started
+    enabled: true
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: true

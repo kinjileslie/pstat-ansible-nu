@@ -1,0 +1,12 @@
+---
+# role_sssd_ldap handlers
+# Handlers for SSSD service management
+
+- name: Restart sssd
+  service:
+    name: sssd
+    state: restarted
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: true

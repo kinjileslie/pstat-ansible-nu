@@ -1,0 +1,21 @@
+---
+# role_sssd_ldap meta
+# Dependencies and galaxy info
+
+galaxy_info:
+  author: Kinji Leslie
+  description: SSSD configuration for UCSB LDAP integration
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: AlmaLinux
+      versions:
+        - "9"
+  galaxy_tags:
+    - sssd
+    - ldap
+    - authentication
+    - identity
+    - authentication
+
+dependencies: []
