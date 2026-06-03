@@ -77,6 +77,15 @@ These layers follow an **Explicit Orchestration** model. Instead of hidden boole
     - **VLAN Trust Model**: [TODO] Decide on the trust level for the 1173 network (e.g., "Full Trust" vs. "Restricted Service Access") and implement in the firewall policy.
 - **L5 (User Apps)**: Researcher tools (e.g., RStudio, Podman).
 
+## 🗺️ Future Infrastructure Evolution
+- **Migration Path**: Transition from legacy management hosts (bobby/race/ctrl1) to a new, self-provisioned jump host built using these scripts ("Dogfooding").
+- **Identity Goal**: Shift from local identity management to centralized LDAP/SSSD.
+- **Storage Challenge**: Evaluate alternatives to Longhorn for large user data volumes (500GB+), as Longhorn performance degrades at scale. Explore Ceph or other sovereign storage solutions.
+- **Infrastructure Evolution**: 
+    - **Migration Path**: Transition from legacy management hosts (bobby/race/ctrl1) to a new, self-provisioned jump host built using these scripts ("Dogfooding").
+    - **Identity Goal**: Shift from local identity management to centralized LDAP/SSSD.
+    - **Storage Challenge**: Evaluate alternatives to Longhorn for large user data volumes (500GB+), as Longhorn performance degrades at scale. Explore Ceph or other sovereign storage solutions.
+
 **Usage**:
 ```bash
 ansible-playbook -i inventories/pstat.ini deploy_l4_system_apps.yml --limit <hostname> --tags "splunk,pmm"
@@ -88,6 +97,8 @@ ansible-playbook -i inventories/pstat.ini deploy_l4_system_apps.yml --limit <hos
 - **Agent Context**: For detailed technical history, decision logs, and AI-specific context, refer to [ansible_agent_context.txt](./ansible_agent_context.txt).
 - **Adding Jump Hosts**: Add new IPs to `group_vars/pstat.yml` under `pstat_mgmt_ips`. This automatically updates both the Firewall and Fail2Ban ignore lists.
 - **Customizing Roles**: All logic is atomic. To change a specific feature, edit the role in `roles/` and run the corresponding `deploy_lX.yml` playbook.
+- **Key Path Fragility**: SSH private key paths in `pstat_identity_registry` are currently hardcoded to specific home directories. This will break if the management user or host changes. Needs transition to environment variables or project-relative paths.
+- **SSH Stability**: Persistent disconnects and timeouts are still occurring from `seabastion` to target nodes, despite `systemd-linger` being enabled. Investigation into TCP KeepAlives and SSH Server timeout settings is required.
 
 ### 📖 Engineer's Notebook: Troubleshooting the Shield
 
