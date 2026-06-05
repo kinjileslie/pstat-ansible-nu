@@ -27,7 +27,7 @@ Alternatively, run specific layers:
         - `access-level1-public`: Open to the world (SSH enabled on public zone).
         - `access-level2-internal`: Open to Campus and Management.
         - `access-level3-restricted`: Open to Management only.
-    - **Symmetry**: This allows for rapid fleet-wide security shifts (e.g., moving all nodes to `access-level3-restricted` during an incident) while maintaining granular control.
+    - **Firewall Precedence (The "Campus Hijack")**: Identified a critical bug where overlapping IP ranges (e.g., Management IP within a larger Campus CIDR) cause `firewalld` to route traffic to the wrong zone. Because the `filter_INPUT_ZONES` chain evaluates rules linearly, the first match wins. To resolve this, the firewall must apply sources in a strict **Specific $\rightarrow$ General** order (Management $\rightarrow$ Campus) to ensure administrative access is not "hijacked" by broader network rules.
     - **Verification**: On AlmaLinux 9, `firewalld` uses native `nftables` sets. **DO NOT** use `ipset list` for verification; it will return empty results. Use `nft list set inet firewalld <set_name>` to verify IPSet population.
     - **Interface Authority**: NetworkManager profiles override `firewalld` zone assignments. Interfaces are bound to zones via `nmcli` using the connection UUID to ensure persistence.
     - **Identity-Based Access**: To prevent "VLAN Leaks," the firewall uses **Rich Rules** rather than general zone services for internal/trusted zones. This ensures that services (like SSH) are only accessible to IPs defined in the corresponding IPSet, regardless of which interface is used.

@@ -2,10 +2,10 @@
 # role_sssd_ldap defaults
 # SSSD configuration for UCSB LDAP (collaborate.ucsb.edu)
 
-# LDAP Servers
+# LDAP Servers (actual hostnames that resolve)
 pstat_ldap_uris:
-  - ldap://ldap1-ab.collaborate.ucsb.edu/
-  - ldap://ldap2-ab.collaborate.ucsb.edu/
+  - ldap://ldap.collaborate.ucsb.edu/
+  - ldap://ldap2.collaborate.ucsb.edu/
 
 # LDAP Search Base
 pstat_ldap_search_base: "dc=collaborate,dc=ucsb,dc=edu"

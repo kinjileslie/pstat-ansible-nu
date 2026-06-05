@@ -14,23 +14,48 @@
     dest: "/etc/firewalld/ipsets/{{ item.name }}.xml"
   loop: "{{ pstat_ipsets }}"
 
+- name: "FIREWALL | Populate IPSet entries using ipset binary"
+  ansible.builtin.shell: |
+    set -e
+    cat {{ '/etc/firewalld/ipsets/' + item + '.xml' }} | grep '<entry>' | sed 's/.*<entry>//;s/<\/entry>.*//' | while read ip; do
+      ipset add {{ item }} $ip
+    done
+  loop: "{{ pstat_ipsets | map(attribute='name') | list }}"
+  ignore_errors: yes
+
 - name: "FIREWALL | Dynamically Bind Interfaces to Zones (via UUID)"
   shell: |
     set -e
-    # Extract UUID using the primitive terse format that is verified to work on this OS
     UUID=$(nmcli -t connection show --active | grep ":{{ item.iface }}$" | cut -d: -f2)
     if [ -z "$UUID" ]; then
       echo "No active connection found for {{ item.iface }}"
       exit 1
     fi
-    # Force the zone on the connection profile
+    CONN_ID=$(nmcli -t connection show --active | grep ":{{ item.iface }}$" | cut -d: -f1)
     nmcli connection modify $UUID connection.zone {{ item.zone }}
-    # Reapply the connection to push the change to the runtime
+    nmcli connection modify "$CONN_ID" connection.zone {{ item.zone }}
     nmcli connection up $UUID
   loop:
     - { zone: 'public', iface: 'eth1' }
     - { zone: 'internal', iface: 'eth0' }
-  when: item.iface in ansible_interfaces
+  when: item.iface in ansible_interfaces and pstat_firewall_profile != 'access-level3-restricted'
+  changed_when: true
+
+- name: "FIREWALL | Bind Management Interface to Trusted Zone (Level 3 Only)"
+  shell: |
+    set -e
+    UUID=$(nmcli -t connection show --active | grep ":{{ item.iface }}$" | cut -d: -f2)
+    if [ -z "$UUID" ]; then
+      echo "No active connection found for {{ item.iface }}"
+      exit 1
+    fi
+    CONN_ID=$(nmcli -t connection show --active | grep ":{{ item.iface }}$" | cut -d: -f1)
+    nmcli connection modify $UUID connection.zone {{ item.zone }}
+    nmcli connection modify "$CONN_ID" connection.zone {{ item.zone }}
+    nmcli connection up $UUID
+  loop:
+    - { zone: 'trusted', iface: 'eth0' }
+  when: item.iface in ansible_interfaces and pstat_firewall_profile == 'access-level3-restricted'
   changed_when: true
 
 - name: "FIREWALL | Ensure zones exist (Permanent)"
@@ -48,13 +73,13 @@
   vars:
     zone_services: "{{ pstat_firewall_profiles[pstat_firewall_profile][zone_name] | default([]) }}"
 
-- name: "FIREWALL | Hard Restart - Force read from XMLs"
-  ansible.builtin.systemd:
-    name: firewalld
-    state: restarted
-
-- name: "FIREWALL | Final Sync"
+- name: "FIREWALL | Reload firewalld to apply IPSet changes (creates ipsets from XMLs)"
   ansible.builtin.shell: "firewall-cmd --reload"
+  changed_when: true
+
+- name: "FIREWALL | Reload firewalld to apply zone changes (preserves zone bindings)"
+  ansible.builtin.shell: "firewall-cmd --reload"
+  changed_when: true
 
 - name: Write Firewall Policy Version Breadcrumb
   ansible.builtin.copy:

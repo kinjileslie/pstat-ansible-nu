@@ -8,10 +8,21 @@
     - (pstat_zones[zone_name].source is defined or pstat_zones[zone_name].sources is defined)
   ignore_errors: yes
 
-- name: Apply Zone Sources
-  ansible.builtin.shell: "firewall-cmd --permanent --zone={{ zone_name }} --add-source={{ item }}"
-  loop: "{{ [pstat_zones[zone_name].source] if (pstat_zones[zone_name].source is defined and pstat_zones[zone_name].source is not none) else pstat_zones[zone_name].sources | default([]) }}"
+- name: Apply Zone Sources (only if not already set)
+  shell: |
+    set -e
+    CURRENT_SOURCE=$(firewall-cmd --permanent --zone={{ zone_name }} --get-sources 2>/dev/null | tr -d '\n')
+    TARGET_SOURCE="{{ [pstat_zones[zone_name].source] | first if (pstat_zones[zone_name].source is defined and pstat_zones[zone_name].source is not none) else (pstat_zones[zone_name].sources | first if (pstat_zones[zone_name].sources is defined and pstat_zones[zone_name].sources | length > 0) else '') }}"
+    if [ "$CURRENT_SOURCE" != "$TARGET_SOURCE" ]; then
+      # Remove all current sources first
+      for src in $CURRENT_SOURCE; do
+        firewall-cmd --permanent --zone={{ zone_name }} --remove-source="$src"
+      done
+      # Add new source
+      firewall-cmd --permanent --zone={{ zone_name }} --add-source="$TARGET_SOURCE"
+    fi
   when: (pstat_zones[zone_name].source is defined and pstat_zones[zone_name].source is not none) or pstat_zones[zone_name].sources is defined
+  changed_when: false
 
 - name: Apply Zone Services (Global Allow)
   ansible.posix.firewalld:
