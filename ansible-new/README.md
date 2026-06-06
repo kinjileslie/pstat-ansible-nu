@@ -64,6 +64,11 @@ These layers follow an **Explicit Orchestration** model. Instead of hidden boole
     - **Identity & Observability**: [TODO] Integrate LDAP/SSSD and Monitoring agents.
     - **Symmetry Cleanup**: [TODO] Remove the "Emergency" `PubkeyAcceptedAlgorithms` override from L3 compliance playbooks once the `is_fips_enabled` toggle is verified fleet-wide.
     - **L4-Tuning**: [TODO] Remove "Canary" debug prints from `role_network_bridge`.
+    - **Zone Semantic Relabeling**: [TODO] Transition the primary interface label from `trusted` $\rightarrow$ `public` to align the zone name with physical exposure and remove the semantic irony of a "trusted" zone that is set to `target: DROP`.
+    - **Container Resource Guarding**: [TODO] Investigate and implement system-wide overrides for:
+        - `pids_limit`: Prevent container-driven PID exhaustion (allow users to scale Podman workloads).
+        - `keyctl`: Manage `kernel.keys.maxkeys` and `kernel.keys.maxbytes` to support high-density container key rings.
+        - `cgroups/OOM`: Implement systemd transient scopes (e.g., `systemd-run --user --scope -p MemoryMax=...`) to prevent ad-hoc scripts from triggering global OOM kills.
     - **Identity Evolution (Key-Duo)**: [PLANNING] Transition from a single build key to a "Polyglot" identity model.
         - Use `ansible_ssh_private_key_file` in `host_vars` to dynamically select between Ed25519 (Nu-Pink) for standard nodes and ECDSA (Nu-Gold) for FIPS-compliant nodes.
         - This removes the bottleneck of a hardcoded key in `ansible.cfg` and prevents `MaxAuthTries` lockouts.
