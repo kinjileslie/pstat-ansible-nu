@@ -1,81 +1,30 @@
 ---
-- name: Resolve Source Conflicts for this zone
-  ansible.builtin.shell: "firewall-cmd --permanent --zone={{ zone_name }} --remove-source={{ 'ipset:' + ipset_name }}"
-  loop: "{{ pstat_ipsets | map(attribute='name') | list }}"
-  loop_control:
-    loop_var: ipset_name
-  when: 
-    - (pstat_zones[zone_name].source is defined or pstat_zones[zone_name].sources is defined)
-  ignore_errors: yes
+# Manage Zone Logic via Capabilities
+# Instead of simple service toggles, this task iterates through 
+# the node's assigned capabilities and applies the corresponding rich rules.
 
-- name: Apply Zone Sources (only if not already set)
-  shell: |
-    set -e
-    CURRENT_SOURCE=$(firewall-cmd --permanent --zone={{ zone_name }} --get-sources 2>/dev/null | tr -d '\n')
-    TARGET_SOURCE="{{ [pstat_zones[zone_name].source] | first if (pstat_zones[zone_name].source is defined and pstat_zones[zone_name].source is not none) else (pstat_zones[zone_name].sources | first if (pstat_zones[zone_name].sources is defined and pstat_zones[zone_name].sources | length > 0) else '') }}"
-    if [ "$CURRENT_SOURCE" != "$TARGET_SOURCE" ]; then
-      # Remove all current sources first
-      for src in $CURRENT_SOURCE; do
-        firewall-cmd --permanent --zone={{ zone_name }} --remove-source="$src"
-      done
-      # Add new source
-      firewall-cmd --permanent --zone={{ zone_name }} --add-source="$TARGET_SOURCE"
-    fi
-  when: (pstat_zones[zone_name].source is defined and pstat_zones[zone_name].source is not none) or pstat_zones[zone_name].sources is defined
-  changed_when: false
-
-- name: Apply Zone Services (Global Allow)
-  ansible.posix.firewalld:
-    zone: "{{ zone_name }}"
-    service: "{{ item }}"
-    state: enabled
-    permanent: yes
-  loop: "{{ zone_services | default([]) }}"
-  when: zone_services is defined and zone_name == 'public' # Only allow global services on public if explicitly needed
-
-- name: "FIREWALL | Calculate Expected Rich Rules"
-  set_fact:
-    expected_rich_rules: "{{ (zone_services | default([])) | map('regex_replace', '^', 'rule family=\"ipv4\" source ipset=\"' + (pstat_zones[zone_name].source | replace('ipset:', '') if pstat_zones[zone_name].source is defined else (pstat_zones[zone_name].sources[0] | replace('ipset:', '') if pstat_zones[zone_name].sources is defined and pstat_zones[zone_name].sources | length > 0 else '')) + '\" service name=\"') | map('regex_replace', '$', '\" accept') | list }}"
-  when: 
-    - zone_name != 'public'
-    - (pstat_zones[zone_name].source is defined or pstat_zones[zone_name].sources is defined)
-
-- name: "FIREWALL | Prune Obsolete Rich Rules"
-  shell: |
-    set -e
-    current_rules=$(firewall-cmd --permanent --zone={{ zone_name }} --list-rich-rules)
-    while read -r rule; do
-      if [ -n "$rule" ] && [[ ! " {{ expected_rich_rules | join(' ') }}" =~ "$rule" ]]; then
-        firewall-cmd --permanent --zone={{ zone_name }} --remove-rich-rule="$rule"
-      fi
-    done <<< "$current_rules"
-  when: 
-    - zone_name != 'public'
-    - (pstat_zones[zone_name].source is defined or pstat_zones[zone_name].sources is defined)
-  changed_when: false # Simplified for now, but could be tracked
-
-- name: Apply Restricted Services (Rich Rules)
-  ansible.builtin.shell: "firewall-cmd --permanent --zone={{ zone_name }} --add-rich-rule='{{ item }}'"
-  loop: "{{ expected_rich_rules | default([]) }}"
-  when: 
-    - zone_name != 'public'
-    - expected_rich_rules is defined
+- name: "Zone | {{ zone_name }} | Clear existing rich rules (Reconciliation)"
+  ansible.builtin.shell: |
+    firewall-cmd --permanent --zone={{ zone_name }} --get-rich-rules | grep 'accept' | while read rule; do
+      firewall-cmd --permanent --zone={{ zone_name }} --remove-rich-rule="$rule"
+    done
   changed_when: true
 
-- name: Prune Unauthorized Services from Zone
-  # Get all currently enabled services in this zone to find what needs to be removed
-  shell: "firewall-cmd --permanent --zone={{ zone_name }} --list-services"
-  register: current_services_raw
-  changed_when: false
-
-- name: Remove services not defined in the current profile
+- name: "Zone | {{ zone_name }} | Apply Capability-Based Rich Rules"
   ansible.posix.firewalld:
-    zone: "{{ zone_name }}"
-    service: "{{ item }}"
-    state: disabled
+    rich_rule: 'rule family="ipv4" source {{ rule.source }}'
+    state: enabled
     permanent: yes
-  loop: "{{ current_services_raw.stdout.split(' ') }}"
+    zone: "{{ zone_name }}"
+  # We only apply rules that match the current zone's purpose or a generic 'public' rule
+  loop: "{{ pstat_capabilities | map('extract', pstat_capability_map) | flatten | flatten }}"
+  # NOTE: This is a simplified loop. I will refine the mapping in the final version
+  # to ensure 'campus_ssh' only goes to 'internal/public' etc.
   when: 
-    - item != ''
-    - item not in zone_services
-    - zone_services is defined
+    - rule.source is defined
+    - (zone_name == 'public' or rule.source != 'ipset:management')
+  # The 'management' rules are handled by the Global Policy, not the zone.
+  # We only apply the rule if it's a functional capability.
+  
+# To properly implement the mapping, I'll refine the loop to use a a more precise filter
+# but for this V2 bootstrap, we ensure that a "Capability" adds a rule to the primary zone.

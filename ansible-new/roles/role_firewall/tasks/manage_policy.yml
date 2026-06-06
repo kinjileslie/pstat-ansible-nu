@@ -1,0 +1,33 @@
+---
+# Manage Firewalld Policies (The VIP Lanes)
+# This task ensures that administrative access is handled via Policies, 
+# which are evaluated BEFORE zone selection.
+
+- name: "Policy | Ensure Policy exists"
+  ansible.builtin.shell: "firewall-cmd --permanent --new-policy={{ item.name }}"
+  loop: "{{ pstat_firewall_policies }}"
+  ignore_errors: yes
+
+- name: "Policy | Configure Ingress Zone"
+  ansible.builtin.shell: "firewall-cmd --permanent --policy={{ item.name }} --add-ingress-zone {{ item.ingress }}"
+  loop: "{{ pstat_firewall_policies }}"
+  changed_when: true
+
+- name: "Policy | Configure Egress Zone"
+  ansible.builtin.shell: "firewall-cmd --permanent --policy={{ item.name }} --add-egress-zone {{ item.egress }}"
+  loop: "{{ pstat_firewall_policies }}"
+  changed_when: true
+
+- name: "Policy | Set Policy Target to CONTINUE"
+  ansible.builtin.shell: "firewall-cmd --permanent --policy={{ item.name }} --set-target CONTINUE"
+  loop: "{{ pstat_firewall_policies }}"
+  changed_when: true
+
+- name: "Policy | Apply Policy Rules"
+  ansible.builtin.shell: |
+    firewall-cmd --permanent --policy={{ item.0.name }} \
+    --add-rich-rule='rule family="ipv4" source {{ item.1.source | replace("ipset:", "ipset=") }} service name="{{ item.1.service }}" {{ item.1.action }}'
+  with_subelements:
+    - "{{ pstat_firewall_policies }}"
+    - rules
+  changed_when: true

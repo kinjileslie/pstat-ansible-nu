@@ -1,0 +1,14 @@
+---
+- name: Deploy L2 Shield (V2 - Identity Based)
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Apply Modernized Firewall Architecture
+      ansible.builtin.include_role:
+        name: role_firewall
+
+    - name: Apply Fail2Ban Security
+      ansible.builtin.include_role:
+        name: role_fail2ban

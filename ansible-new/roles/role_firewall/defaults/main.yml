@@ -1,7 +1,8 @@
 ---
-# Firewall Configuration Defaults
-# Define IP sets as: { name: 'set_name', type: 'hash:net' or 'hash:ip', ips: [ 'ip1', 'ip2' ] }
+# Firewall Configuration Defaults (V2 - Identity-Based Architecture)
 
+# --- Identity Registry ---
+# Define IP sets as: { name: 'set_name', type: 'hash:net' or 'hash:ip', ips: [ 'ip1', 'ip2' ] }
 pstat_ipsets:
   - name: management
     type: "hash:ip"
@@ -16,38 +17,43 @@ pstat_ipsets:
     type: "hash:ip"
     ips: "{{ pstat_backup_ips }}"
 
-# Access Level Profiles
-# We map our levels to built-in firewalld zones for maximum stability and NetworkManager compatibility.
-# Mapping:
-#   Level 3 (Restricted) -> 'trusted' zone
-#   Level 2 (Internal)   -> 'internal' zone
-#   Level 1 (Public)     -> 'public' zone
-pstat_firewall_profiles:
-  access-level1-public:
-    public: ["ssh", "snmp"]
-    internal: ["ssh", "snmp"]
-    trusted: ["ssh", "snmp", "cockpit"]
-  access-level2-internal:
-    public: []
-    internal: ["ssh", "snmp"]
-    trusted: ["ssh", "snmp", "cockpit"]
-  access-level3-restricted:
-    public: []
-    internal: []
-    trusted: ["ssh", "snmp", "cockpit"]
+# --- Global Administrative Policies (The VIP Lanes) ---
+# Policies are processed BEFORE zones. They ensure admin access regardless of NIC zone.
+pstat_firewall_policies:
+  - name: mgmt-ssh
+    ingress: "ANY"
+    egress: "HOST"
+    rules:
+      - { source: "ipset:management", service: "ssh", action: "accept" }
+      - { source: "ipset:management", service: "cockpit", action: "accept" }
 
-# Default profile if none is specified in host_vars
-pstat_firewall_profile: "access-level2-internal"
+# --- Capability Registry ---
+# Maps human-readable capabilities to technical rich rules.
+# format: { capability_name: { rules: [ { source: 'ipset:name', port: 123, proto: 'tcp', action: 'accept' } ] } }
+pstat_capability_map:
+  monitoring_target:
+    rules:
+      - { source: "ipset:monitoring", port: 9100, proto: "tcp", action: "accept" }
+      - { source: "ipset:monitoring", service: "snmp", action: "accept" }
+  backup_target:
+    rules:
+      - { source: "ipset:backup-network", port: 9102, proto: "tcp", action: "accept" }
+  campus_ssh:
+    rules:
+      - { source: "ipset:campus", service: "ssh", action: "accept" }
 
-# Zone Mapping: Repurposing built-in zones to avoid NetworkManager conflicts.
+# --- Host Configuration ---
+# Default capabilities for all nodes (can be overridden in host_vars)
+pstat_capabilities: []
+
+# Mapping for NIC -> Zone (The "Labels")
+# Default: Most nodes use eth0 as 'public' for default-deny security.
+pstat_nic_zones:
+  eth0: "public"
+  eth1: "public"
+
+# Baseline zone definitions
 pstat_zones:
-  public:
-    source: null # Default zone, no source needed
-  internal:
-    source: "ipset:campus"
-  trusted:
-    source: "ipset:management"
-  monitoring:
-    source: "ipset:monitoring"
-  backup-network:
-    source: "ipset:backup-network"
+  public: { source: null }
+  internal: { source: "ipset:campus" }
+  trusted: { source: "ipset:management" }

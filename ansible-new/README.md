@@ -17,25 +17,19 @@ Run the full baseline integration test:
 ansible-playbook -i inventories/pstat.ini test_l1_safe.yml --limit <hostname>
 ```
 
-**Note on Provisioning**: New VMs are instantiated via Cloud-Init with a minimal "Absolute Zero" configuration. This provides only the **Build Key (KINJI ANSIBLE NU PINK)** and the `qemu-guest-agent`. All other users, keys, and packages are handled by the Ansible pipeline.
+**Note on Provisioning**: New VMs are instantiated via Cloud-Init with a minimal "Absolute Zero" configuration. This provides the **Build Keys** and the `qemu-guest-agent`. All other users, keys, and packages are handled by the Ansible pipeline.
+- **Nu-Pink (Ed25519)**: Standard provisioning key.
+- **Nu-Gold (ECDSA)**: Hardened/FIPS provisioning key; required for the strict compliance build path.
+
 Alternatively, run specific layers:
 - **Layer 1 (Base)**: `ansible-playbook -i inventories/pstat.ini deploy_l1_base.yml --limit <hostname>`
-- **Layer 2 (Shield)**: Perimeter security. Now utilizes a **Profile-Based Firewall** model:
-    - **Firewall Profiles**: Instead of individual toggles, nodes are assigned an access level in `host_vars` or via command-line overrides.
-    - **Tiered Trust**: Policies are applied across four distinct zones: `management` (Fortress), `campus` (Internal), `public` (Wild), and functional zones (`monitoring`, `backup`).
-    - **Access Gradient**:
-        - `access-level1-public`: Open to the world (SSH enabled on public zone).
-        - `access-level2-internal`: Open to Campus and Management.
-        - `access-level3-restricted`: Open to Management only.
-    - **Firewall Precedence (The "Campus Hijack")**: Identified a critical bug where overlapping IP ranges (e.g., Management IP within a larger Campus CIDR) cause `firewalld` to route traffic to the wrong zone. Because the `filter_INPUT_ZONES` chain evaluates rules linearly, the first match wins. To resolve this, the firewall must apply sources in a strict **Specific $\rightarrow$ General** order (Management $\rightarrow$ Campus) to ensure administrative access is not "hijacked" by broader network rules.
-    - **Verification**: On AlmaLinux 9, `firewalld` uses native `nftables` sets. **DO NOT** use `ipset list` for verification; it will return empty results. Use `nft list set inet firewalld <set_name>` to verify IPSet population.
+- **Layer 2 (Shield)**: Perimeter security. Now utilizes a **Capability-Based Firewall** model:
+    - **The "VIP Lane" (Global Policy)**: Administrative access is decoupled from network zones using a `firewalld` Policy (`mgmt-ssh`). This ensures that management traffic is accepted *before* zone selection, eliminating the "Campus Hijack" (where overlapping CIDRs cause admin traffic to be routed to the wrong zone).
+    - **The Stealth Posture (Default DROP)**: All zones (Public, Internal, Trusted) are set to `target: DROP`. This creates a "Dark Box" effect where the server ignores all traffic unless an explicit identity-based rule exists.
+    - **Identity-Based Capabilities**: Instead of enabling services, nodes are assigned "Capabilities" (e.g., `monitoring_target`, `backup_target`, `campus_ssh`). These map to **Rich Rules** that allow specific IPSets to access specific ports.
+    - **Interface Labels**: Zones are used simply as labels for the NICs (e.g., `eth0` $\rightarrow$ `public`). This separates the physical connection from the security policy.
+    - **Verification**: On AlmaLinux 9, `firewalld` uses native `nftables` sets. **DO NOT** use `ipset list` for verification. Use `nft list set inet firewalld <set_name>` to verify IPSet population.
     - **Interface Authority**: NetworkManager profiles override `firewalld` zone assignments. Interfaces are bound to zones via `nmcli` using the connection UUID to ensure persistence.
-    - **Identity-Based Access**: To prevent "VLAN Leaks," the firewall uses **Rich Rules** rather than general zone services for internal/trusted zones. This ensures that services (like SSH) are only accessible to IPs defined in the corresponding IPSet, regardless of which interface is used.
-    - **Ad-Hoc Testing**: To test a stricter policy without modifying permanent variables:
-      ```bash
-      ansible-playbook -i inventories/pstat.ini deploy_l2_shield.yml --limit <hostname> -e "pstat_firewall_profile=access-level3-restricted"
-      ```
-      *Note: To revert to the baseline, simply run the playbook without the `-e` flag.*
 
 ### 2. Verifying Node State
 To check if a node has been correctly provisioned and see the audit trail:
@@ -81,10 +75,6 @@ These layers follow an **Explicit Orchestration** model. Instead of hidden boole
 - **Migration Path**: Transition from legacy management hosts (bobby/race/ctrl1) to a new, self-provisioned jump host built using these scripts ("Dogfooding").
 - **Identity Goal**: Shift from local identity management to centralized LDAP/SSSD.
 - **Storage Challenge**: Evaluate alternatives to Longhorn for large user data volumes (500GB+), as Longhorn performance degrades at scale. Explore Ceph or other sovereign storage solutions.
-- **Infrastructure Evolution**: 
-    - **Migration Path**: Transition from legacy management hosts (bobby/race/ctrl1) to a new, self-provisioned jump host built using these scripts ("Dogfooding").
-    - **Identity Goal**: Shift from local identity management to centralized LDAP/SSSD.
-    - **Storage Challenge**: Evaluate alternatives to Longhorn for large user data volumes (500GB+), as Longhorn performance degrades at scale. Explore Ceph or other sovereign storage solutions.
 
 **Usage**:
 ```bash
@@ -125,7 +115,12 @@ Before deciding a tool is broken and pivoting to a custom implementation:
 - **The Truth**: NetworkManager connection profiles (`.nmconnection`) override `firewalld` runtime assignments.
 - **The Fix**: You must modify the specific **UUID** of the active NetworkManager profile to change the zone.
 
-## 🚫 SSH Connection Stability (The "Idle Timeout" Mystery)
+#### 5. Policy Syntax & Idempotency (The \"V2\" struggle)
+- **CLI Constraints**: `firewall-cmd` does not allow setting ingress and egress zones in a single command; they must be separate `--add-ingress-zone` and `--add-egress-zone` calls.
+- **Target Logic**: To prevent global lockouts while allowing specific rules, policies should use `--set-target CONTINUE`. This allows the policy to handle its rules and then \"pass the baton\" back to the zone selector for remaining traffic.
+- **Idempotency**: `new-policy` will return a `NAME_CONFLICT` if the policy exists; this should be ignored in Ansible.
+
+## 🚫 SSH Connection Stability (The \"Idle Timeout\" Mystery)
 
 ### The Problem
 SSH sessions and sshfs mounts from `seabastion` to target nodes are disconnecting after ~45-60 minutes of idle time, despite `systemd-linger` and `ControlMaster` being enabled.
@@ -135,7 +130,7 @@ SSH sessions and sshfs mounts from `seabastion` to target nodes are disconnectin
 2. **SSH Keepalive Configurations**:
    - Server-side (`ClientAliveInterval 0`): Disabled (seabastion doesn't send keepalives)
    - Client-side (`ServerAliveInterval 300`): Enabled on `flanker` (client sends every 5 min)
-3. **sshfs "Ghost Mounts"**: Mounts show as active in `df -h` but are actually dead after idle, confirming network-level disconnect.
+3. **sshfs \"Ghost Mounts\"**: Mounts show as active in `df -h` but are actually dead after idle, confirming network-level disconnect.
 4. **Timing**: Disconnects occur after ~45-60 minutes, which is not the default 10-minute timeout or the CUI 30-minute timeout.
 
 ### Root Cause
@@ -145,8 +140,8 @@ Network firewall/NAT device between `seabastion` and target nodes is killing idl
 Add server-side SSH keepalives to `seabastion`:
 ```bash
 # Create keepalive config
-echo "ClientAliveInterval 30" | sudo tee /etc/ssh/sshd_config.d/99-keepalive.conf
-echo "ClientAliveCountMax 3" | sudo tee -a /etc/ssh/sshd_config.d/99-keepalive.conf
+echo \"ClientAliveInterval 30\" | sudo tee /etc/ssh/sshd_config.d/99-keepalive.conf
+echo \"ClientAliveCountMax 3\" | sudo tee -a /etc/ssh/sshd_config.d/99-keepalive.conf
 
 # Reload SSHD
 sudo systemctl reload sshd
@@ -169,17 +164,15 @@ Compliance is managed as an optional overlay. Use `deploy_l3.3_compliance.yml` w
 | **Standard** | `low_complexity,medium_complexity,no_reboot_needed` | Tightens filesystem mounts and SSH timeouts. |
 | **Strict** | `low_complexity,medium_complexity,high_complexity` | Full audit enforcement and restrictive network policies. |
 
-### ⚙️ Architecture: Policy vs. Implementation (The "Symmetry" Model)
+### ⚙️ Architecture: Policy vs. Implementation (The \"Symmetry\" Model)
 To maintain a balance between standard baseline and node-specific needs, we use a split-variable strategy for LVM and Hardening:
 
-- **Role Defaults (`roles/*/defaults/main.yml`)**: Define the **Implementation Baseline**. (e.g., "Standard volume sizes: `/home` is 20GB, `/tmp` is 10GB"). This is the "blueprint."
-- **Group Variables (`group_vars/pstat.yml`)**: Define the **Fleet Policy**. (e.g., "All volumes must use the `nofail` mount option"). This is the "governance."
-- **Host Variables (`host_vars/*.yml`)**: Define **Exceptions**. (e.g., "This specific node needs 100GB for `/home`").
+- **Role Defaults (`roles/*/defaults/main.yml`)**: Define the **Implementation Baseline**. (e.g., \"Standard volume sizes: `/home` is 20GB, `/tmp` is 10GB\"). This is the \"blueprint.\"\n- **Group Variables (`group_vars/pstat.yml`)**: Define the **Fleet Policy**. (e.g., \"All volumes must use the `nofail` mount option\"). This is the \"governance.\"\n- **Host Variables (`host_vars/*.yml`)**: Define **Exceptions**. (e.g., \"This specific node needs 100GB for `/home`\").
 
 **Why?** This allows us to change the fleet-wide policy (e.g., updating mount options) in one place without touching the underlying structural blueprints of the roles.
 
 ### ⚠️ Operational Exceptions
-To maintain system stability and support the "Layer Cake" architecture, the following CUI controls are explicitly disabled:
+To maintain system stability and support the \"Layer Cake\" architecture, the following CUI controls are explicitly disabled:
 
 - **`subscription-manager`**: Not applicable to AlmaLinux.
 - **`usbguard`**: Not applicable to Harvester VMs.
@@ -196,17 +189,17 @@ To maintain system stability and support the "Layer Cake" architecture, the foll
 - **Plumbing**: L4 capability-based model implemented; `role_network_bridge` verified for multi-VLAN routing.
 - **Open Items**:
     - Validate the overlap between low and medium complexity controls in the RHEL9 CUI role.
-    - Update `role_lvm_fortress` to the "CUI-Complete" layout (add `/var/tmp` and `/home`).
+    - Update `role_lvm_fortress` to the \"CUI-Complete\" layout (add `/var/tmp` and `/home`).
     - Isolate `/var/tmp` via LVM to prevent root partition exhaustion (CUI requirement).
-    - Execute the "Home Pivot" to `/local/home` to isolate user data from OS.
-    - Implement legally compliant "California-grade" MOTD (Privacy/Monitoring warnings).
-    - Implement a "Dynamic Announcement" system: 
-        - Use `/etc/issue` as the static legal "No Trespassing" sign.
+    - Execute the \"Home Pivot\" to `/local/home` to isolate user data from OS.
+    - Implement legally compliant \"California-grade\" MOTD (Privacy/Monitoring warnings).
+    - Implement a \"Dynamic Announcement\" system: 
+        - Use `/etc/issue` as the static legal \"No Trespassing\" sign.
         - Use `/etc/motd` as a dynamic bulletin board for maintenance alerts, managed via a dedicated `deploy_announcement.yml` playbook.
     - **[OPEN] Firewall Policy Validation**: Perform rigorous cross-node testing for all three access levels (`public`, `internal`, `restricted`).
         - Verify `sauza` (Campus) can still access `internal` zone services.
         - Verify `flanker`/`ctrl1` (Management) can still access `trusted` zone services under all levels.
-        - Confirm "Total Lockout" on `access-level3-restricted` for all non-management IPs.
+        - Confirm \"Total Lockout\" on `access-level3-restricted` for all non-management IPs.
     - **[OPEN] SSSD/KCM Log Error**: Resolve `sssd_kcm` failure to open `/var/log/sssd/sssd_kcm.log` (No such file or directory) on `seabastion`.
     - **[OPEN] SSH `maxauthtries` Recovery**: Document a reproducible method to clear an IP from the target's fail-list after hitting the maximum authentication attempts limit.
     - [ON HOLD] Layer 4 (Plumbing): Identity (LDAP/SSSD) and Monitoring.
