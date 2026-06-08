@@ -61,18 +61,18 @@ These layers follow an **Explicit Orchestration** model. Instead of hidden boole
         - **Persistence Strategy**: Uses `ipv4.route-metric` to anchor the Public Interface (`eth1`) as the primary gateway (Metric 50) while allowing the Internal Interface (`eth0`) to exist as a secondary (Metric 100+).
         - **Stability**: This ensures that even when DHCP pushes competing gateways, the "Management Path" remains open and survives reboots.
     - **Example**: A node marked as `is_network_bridge: true` will automatically receive the "Core-and-Spoke" routing configuration to bridge the 1173/2176 VLANs.
+    - **Resource Guardrails (`role_resource_guardrails`)**: Protects system stability from unbounded user workloads by containing memory pressure within the user's own Cgroup slice.
+        - **Implementation**: Deploys `user-.slice` overrides to enforce `MemoryHigh` and `MemoryMax` limits.
+        - **Quotas**: Default limits are dynamically calculated as **75% (High)** and **85% (Max)** of total system RAM.
+        - **Control**: Defaults to **ON** for all nodes. Can be disabled per-host via `enable_resource_guardrails: false` in `host_vars`.
+        - **Goal**: Prevents "Global OOM" events (where the kernel kills random system processes) by ensuring a 15% system buffer is always available for the OS and management agents.
     - **Identity & Observability**: [TODO] Integrate LDAP/SSSD and Monitoring agents.
     - **Symmetry Cleanup**: [TODO] Remove the "Emergency" `PubkeyAcceptedAlgorithms` override from L3 compliance playbooks once the `is_fips_enabled` toggle is verified fleet-wide.
     - **L4-Tuning**: [TODO] Remove "Canary" debug prints from `role_network_bridge`.
     - **Zone Semantic Relabeling**: [TODO] Transition the primary interface label from `trusted` $\rightarrow$ `public` to align the zone name with physical exposure and remove the semantic irony of a "trusted" zone that is set to `target: DROP`.
-    - **System Stability (Anti-OOM)**: [TODO] Implement a tiered memory protection strategy to prevent OS crashes during unbounded user workloads:
-        - **User Slices**: Configure `user-.slice` with `MemoryMax` and `MemoryHigh` to cap the total footprint of any single student's session.
+    - **System Stability (Anti-OOM)**: [TODO] Expand `role_resource_guardrails` to include:
         - **OOM Management**: Enable and tune `systemd-oomd` to use PSI (Pressure Stall Information) to kill the largest memory hog within the user slice *before* the kernel triggers a global OOM event.
-        - **Goal**: Move from "Kernel-level blunt force" (random process killing) to "Cgroup-aware precision" (targeting the specific user causing the pressure).
-    - **Container Resource Guarding**: [TODO] Investigate and implement system-wide overrides for:
-        - `pids_limit`: Prevent container-driven PID exhaustion (allow users to scale Podman workloads).
-        - `keyctl`: Manage `kernel.keys.maxkeys` and `kernel.keys.maxbytes` to support high-density container key rings.
-        - `cgroups/OOM`: Implement systemd transient scopes (e.g., `systemd-run --user --scope -p MemoryMax=...`) to prevent ad-hoc scripts from triggering global OOM kills.
+        - **Container Resource Guarding**: Investigate system-wide overrides for `pids_limit` and `keyctl` (maxkeys/maxbytes) to support high-density container workloads.
     - **Identity Evolution (Key-Duo)**: [PLANNING] Transition from a single build key to a "Polyglot" identity model.
         - Use `ansible_ssh_private_key_file` in `host_vars` to dynamically select between Ed25519 (Nu-Pink) for standard nodes and ECDSA (Nu-Gold) for FIPS-compliant nodes.
         - This removes the bottleneck of a hardcoded key in `ansible.cfg` and prevents `MaxAuthTries` lockouts.

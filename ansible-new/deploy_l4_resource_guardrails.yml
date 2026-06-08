@@ -1,0 +1,11 @@
+---
+- name: Deploy Resource Guardrails
+  hosts: all
+  become: yes
+  roles:
+    - role_resource_guardrails
+
+  # Tags allow for targeted execution of this capability within a larger L4 deployment
+  tags:
+    - resource_guardrails
+    - l4_stability

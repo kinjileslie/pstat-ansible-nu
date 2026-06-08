@@ -1,0 +1,22 @@
+---
+# Defaults for the Resource Guardrails role
+# These values provide a safe baseline for most PSTAT nodes.
+
+# Whether to enable the resource guardrails
+enable_resource_guardrails: true
+
+# System Floor: Hard guarantees for the system slice
+# MemoryMin is a hard guarantee, MemoryLow is a soft guarantee.
+system_memory_min: "1G"
+system_memory_low: "2G"
+
+# User Ceiling: Scaling percentages
+# For nodes > 16GB, we use these percentages.
+user_mem_max_percent: 0.85
+user_mem_high_percent: 0.75
+
+# For nodes <= 16GB, we use a fixed buffer to ensure OS survival.
+small_node_buffer_mb: 4096
+
+# For monster nodes, we clamp the buffer to prevent wasting huge amounts of RAM.
+max_system_buffer_mb: 32768

@@ -1,0 +1,55 @@
+---
+- name: Resource Guardrails - Ensure configuration directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /etc/systemd/system/system.slice.d
+    - /etc/systemd/system/user-.slice.d
+
+- name: Resource Guardrails - Calculate Dynamic Memory Limits
+  set_fact:
+    # Total memory in MiB from Ansible facts
+    total_mem_mb: "{{ ansible_memtotal_mb | int }}"
+
+- name: Resource Guardrails - Compute User Max and High limits
+  set_fact:
+    # Logic:
+    # 1. If <= 16GB: Max = Total - SmallNodeBuffer (4GB)
+    # 2. If > 16GB: Max = Total - Clamp(Total * 0.15, Min=4GB, Max=32GB)
+    calculated_user_max_mb: >-
+      {% if total_mem_mb <= 16384 %}
+        {{ total_mem_mb - small_node_buffer_mb }}
+      {% else %}
+        {% set buffer = (total_mem_mb * 0.15) | int %}
+        {% set clamped_buffer = [buffer, 4096, max_system_buffer_mb] | sort %}
+        {{ total_mem_mb - clamped_buffer[1] }}
+      {% endif %}
+
+- name: Resource Guardrails - Compute User High limit (Soft Ceiling)
+  set_fact:
+    calculated_user_high_mb: "{{ (calculated_user_max_mb | float * 0.90) | int }}"
+
+- name: Resource Guardrails - Apply System Floor (The Sledgehammer)
+  copy:
+    dest: /etc/systemd/system/system.slice.d/protection.conf
+    content: |
+      [Slice]
+      MemoryMin={{ system_memory_min }}
+      MemoryLow={{ system_memory_low }}
+  when: enable_resource_guardrails
+
+- name: Resource Guardrails - Apply User Ceiling (The Guardrail)
+  copy:
+    dest: /etc/systemd/system/user-.slice.d/override.conf
+    content: |
+      [Slice]
+      MemoryHigh={{ calculated_user_high_mb }}M
+      MemoryMax={{ calculated_user_max_mb }}M
+  when: enable_resource_guardrails
+
+- name: Resource Guardrails - Reload systemd to apply changes
+  systemd:
+    daemon_reload: yes
+  when: enable_resource_guardrails
