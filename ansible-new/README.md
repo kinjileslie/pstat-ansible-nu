@@ -65,6 +65,10 @@ These layers follow an **Explicit Orchestration** model. Instead of hidden boole
     - **Symmetry Cleanup**: [TODO] Remove the "Emergency" `PubkeyAcceptedAlgorithms` override from L3 compliance playbooks once the `is_fips_enabled` toggle is verified fleet-wide.
     - **L4-Tuning**: [TODO] Remove "Canary" debug prints from `role_network_bridge`.
     - **Zone Semantic Relabeling**: [TODO] Transition the primary interface label from `trusted` $\rightarrow$ `public` to align the zone name with physical exposure and remove the semantic irony of a "trusted" zone that is set to `target: DROP`.
+    - **System Stability (Anti-OOM)**: [TODO] Implement a tiered memory protection strategy to prevent OS crashes during unbounded user workloads:
+        - **User Slices**: Configure `user-.slice` with `MemoryMax` and `MemoryHigh` to cap the total footprint of any single student's session.
+        - **OOM Management**: Enable and tune `systemd-oomd` to use PSI (Pressure Stall Information) to kill the largest memory hog within the user slice *before* the kernel triggers a global OOM event.
+        - **Goal**: Move from "Kernel-level blunt force" (random process killing) to "Cgroup-aware precision" (targeting the specific user causing the pressure).
     - **Container Resource Guarding**: [TODO] Investigate and implement system-wide overrides for:
         - `pids_limit`: Prevent container-driven PID exhaustion (allow users to scale Podman workloads).
         - `keyctl`: Manage `kernel.keys.maxkeys` and `kernel.keys.maxbytes` to support high-density container key rings.
