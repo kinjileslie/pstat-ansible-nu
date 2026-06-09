@@ -1,0 +1,4 @@
+---
+# tom - Open/Public access (Level 1)
+pstat_firewall_profile: "access-level1-public"
+is_fips_enabled: false

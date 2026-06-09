@@ -3,12 +3,17 @@
 # Instead of simple service toggles, this task iterates through 
 # the node's assigned capabilities and applies the corresponding rich rules.
 
-- name: "Zone | {{ zone_name }} | Clear existing rich rules (Reconciliation)"
-  ansible.builtin.shell: |
-    firewall-cmd --permanent --zone={{ zone_name }} --get-rich-rules | grep 'accept' | while read rule; do
-      firewall-cmd --permanent --zone={{ zone_name }} --remove-rich-rule="$rule"
-    done
-  changed_when: true
+- name: "Zone | {{ zone_name }} | Nuke existing zone config (Atomic Reset)"
+  ansible.builtin.file:
+    path: "/etc/firewalld/zones/{{ zone_name }}.xml"
+    state: absent
+
+- name: "Zone | {{ zone_name }} | Re-create zone with DROP target"
+  ansible.posix.firewalld:
+    zone: "{{ zone_name }}"
+    state: present
+    target: DROP
+    permanent: yes
 
 - name: "Zone | {{ zone_name }} | Apply Capability-Based Rich Rules"
   ansible.posix.firewalld:

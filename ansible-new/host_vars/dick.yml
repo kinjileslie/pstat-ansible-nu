@@ -1,0 +1,4 @@
+---
+# dick - Campus Only (Level 2)
+pstat_firewall_profile: "access-level2-internal"
+is_fips_enabled: false

@@ -97,6 +97,7 @@ ansible-playbook -i inventories/pstat.ini deploy_l4_system_apps.yml --limit <hos
 - **Adding Jump Hosts**: Add new IPs to `group_vars/pstat.yml` under `pstat_mgmt_ips`. This automatically updates both the Firewall and Fail2Ban ignore lists.
 - **Customizing Roles**: All logic is atomic. To change a specific feature, edit the role in `roles/` and run the corresponding `deploy_lX.yml` playbook.
 - **Key Path Fragility**: SSH private key paths in `pstat_identity_registry` are currently hardcoded to specific home directories. This will break if the management user or host changes. Needs transition to environment variables or project-relative paths.
+- **Administrative Coordination**: For high-level roadmap, stakeholder syncs, and personal assistant context, refer to [kinji-personal-assistant.md](./kinji-personal-assistant.md).
 
 ### 📖 Engineer's Notebook: Troubleshooting the Shield
 
@@ -121,7 +122,7 @@ Before deciding a tool is broken and pivoting to a custom implementation:
 
 #### 4. Interface Authority (The "Gravity" Problem)
 - **The Issue**: `firewall-cmd --zone=... --add-interface=...` often fails to persist across reloads.
-- **The Truth**: NetworkManager connection profiles (`.nmconnection`) override `firewalld` runtime assignments.
+- **The Truth**: NetworkManager connection profiles (`.nmconnection`) override `firewalld` zone assignments.
 - **The Fix**: You must modify the specific **UUID** of the active NetworkManager profile to change the zone.
 
 #### 5. Policy Syntax & Idempotency (The \"V2\" struggle)
@@ -140,7 +141,7 @@ SSH sessions and sshfs mounts from `seabastion` to target nodes are disconnectin
    - Server-side (`ClientAliveInterval 0`): Disabled (seabastion doesn't send keepalives)
    - Client-side (`ServerAliveInterval 300`): Enabled on `flanker` (client sends every 5 min)
 3. **sshfs \"Ghost Mounts\"**: Mounts show as active in `df -h` but are actually dead after idle, confirming network-level disconnect.
-4. **Timing**: Disconnects occur after ~45-60 minutes, which is not the default 10-minute timeout or the CUI 30-minute timeout.
+4. **Timing**: Disconnects occur after ~45-60 minutes, which is not the default to 10-minute timeout or the CUI 30-minute timeout.
 
 ### Root Cause
 Network firewall/NAT device between `seabastion` and target nodes is killing idle TCP connections after ~45-60 minutes without sending graceful FIN packets. The client/server don't realize the connection is dead until they try to use it.
@@ -176,7 +177,7 @@ Compliance is managed as an optional overlay. Use `deploy_l3.3_compliance.yml` w
 ### ⚙️ Architecture: Policy vs. Implementation (The \"Symmetry\" Model)
 To maintain a balance between standard baseline and node-specific needs, we use a split-variable strategy for LVM and Hardening:
 
-- **Role Defaults (`roles/*/defaults/main.yml`)**: Define the **Implementation Baseline**. (e.g., \"Standard volume sizes: `/home` is 20GB, `/tmp` is 10GB\"). This is the \"blueprint.\"\n- **Group Variables (`group_vars/pstat.yml`)**: Define the **Fleet Policy**. (e.g., \"All volumes must use the `nofail` mount option\"). This is the \"governance.\"\n- **Host Variables (`host_vars/*.yml`)**: Define **Exceptions**. (e.g., \"This specific node needs 100GB for `/home`\").
+- **Role Defaults (`roles/*/defaults/main.yml`)**: Define the **Implementation Baseline**. (e.g., \"Standard volume sizes: `/home` is 20GB, `/tmp` is 10GB\"). This is the \"blueprint.\"\n- **Group Variables (`group_vars/pstat.yml`)**: Define the **Fleet Policy**. (e.g., \"All volumes must use the `nofail` mount option\"). This is the \"governance.\"\n- **Host Variables (`host_vars/*.yml`)**: Define **Exceptions**. (e.g., \"This specific node needs 100GB for `/home`, and others use a 15% buffer).
 
 **Why?** This allows us to change the fleet-wide policy (e.g., updating mount options) in one place without touching the underlying structural blueprints of the roles.
 

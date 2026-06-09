@@ -1,0 +1,4 @@
+---
+# harry - Fully Restricted (Level 3)
+pstat_firewall_profile: "access-level3-restricted"
+is_fips_enabled: false
