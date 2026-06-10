@@ -9,7 +9,7 @@ pstat_ipsets:
     ips: "{{ pstat_mgmt_ips }}"
   - name: campus
     type: "hash:net"
-    ips: ["128.111.0.0/16", "169.229.0.0/16", "169.230.0.0/15", "169.232.0.0/15"]
+    ips: ["128.111.0.0/16", "169.231.0.0/16"]
   - name: monitoring
     type: "hash:ip"
     ips: "{{ pstat_monitoring_ips }}"

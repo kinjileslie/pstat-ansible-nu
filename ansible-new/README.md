@@ -75,7 +75,7 @@ These layers follow an **Explicit Orchestration** model. Instead of hidden boole
         - **Container Resource Guarding**: Investigate system-wide overrides for `pids_limit` and `keyctl` (maxkeys/maxbytes) to support high-density container workloads.
     - **Identity Evolution (Key-Duo)**: [PLANNING] Transition from a single build key to a "Polyglot" identity model.
         - Use `ansible_ssh_private_key_file` in `host_vars` to dynamically select between Ed25519 (Nu-Pink) for standard nodes and ECDSA (Nu-Gold) for FIPS-compliant nodes.
-        - This removes the bottleneck of a hardcoded key in `ansible.cfg` and prevents `MaxAuthTries` lockouts.
+        -, This removes the bottleneck of a hardcoded key in `ansible.cfg` and prevents `MaxAuthTries` lockouts.
     - **Management Perimeter**: [TODO] Finalize and add all legitimate Bastion/Jump host IPs to the `management` IPSet.
     - **VLAN Trust Model**: [TODO] Decide on the trust level for the 1173 network (e.g., "Full Trust" vs. "Restricted Service Access") and implement in the firewall policy.
 - **L5 (User Apps)**: Researcher tools (e.g., RStudio, Podman).
@@ -179,7 +179,7 @@ To maintain a balance between standard baseline and node-specific needs, we use 
 
 - **Role Defaults (`roles/*/defaults/main.yml`)**: Define the **Implementation Baseline**. (e.g., \"Standard volume sizes: `/home` is 20GB, `/tmp` is 10GB\"). This is the \"blueprint.\"\n- **Group Variables (`group_vars/pstat.yml`)**: Define the **Fleet Policy**. (e.g., \"All volumes must use the `nofail` mount option\"). This is the \"governance.\"\n- **Host Variables (`host_vars/*.yml`)**: Define **Exceptions**. (e.g., \"This specific node needs 100GB for `/home`, and others use a 15% buffer).
 
-**Why?** This allows us to change the fleet-wide policy (e.g., updating mount options) in one place without touching the underlying structural blueprints of the roles.
+**Why?** This allows us to change the fleet-wide policy (e.g, updating mount options) in one place without touching the underlying structural blueprints of the roles.
 
 ### ⚠️ Operational Exceptions
 To maintain system stability and support the \"Layer Cake\" architecture, the following CUI controls are explicitly disabled:
@@ -202,7 +202,7 @@ To maintain system stability and support the \"Layer Cake\" architecture, the fo
     - Update `role_lvm_fortress` to the \"CUI-Complete\" layout (add `/var/tmp` and `/home`).
     - Isolate `/var/tmp` via LVM to prevent root partition exhaustion (CUI requirement).
     - Execute the \"Home Pivot\" to `/local/home` to isolate user data from OS.
-    - Implement legally compliant \"California-grade\" MOTD (Privacy/Monitoring warnings).
+    - Implement legally legally compliant \"California-grade\" MOTD (Privacy/Monitoring warnings).
     - Implement a \"Dynamic Announcement\" system: 
         - Use `/etc/issue` as the static legal \"No Trespassing\" sign.
         - Use `/etc/motd` as a dynamic bulletin board for maintenance alerts, managed via a dedicated `deploy_announcement.yml` playbook.

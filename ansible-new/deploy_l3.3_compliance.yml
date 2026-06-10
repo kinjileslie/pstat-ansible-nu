@@ -26,6 +26,9 @@
     - name: Ensure administrative SSH access is maintained before L3
       include_role:
         name: role_provision_access
+    - name: Ensure critical security mount points have correct SELinux labels
+      ansible.builtin.command: restorecon -Rv /var/log/audit
+      changed_when: false
     - name: Generate and set a random root password for compliance
       shell: |
         PASS=$(openssl rand -base64 32)

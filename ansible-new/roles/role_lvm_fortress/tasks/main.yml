@@ -65,6 +65,13 @@
     - { lv: 'lv_home', mount: "{{ pstat_lv_home_mount }}", opts: "{{ pstat_lv_home_options }}" }
     - { lv: 'lv_local', mount: "{{ pstat_lv_local_mount }}", opts: "{{ pstat_lv_local_options }}" }
 
+- name: Ensure critical security mount points have correct SELinux labels
+  ansible.builtin.command: restorecon -Rv {{ item }}
+  loop:
+    - "{{ pstat_lv_audit_mount }}"
+    - "{{ pstat_lv_log_mount }}"
+  changed_when: false
+
 - name: Restore home directory for the deployment user
   file:
     path: /home/almalinux
