@@ -16,4 +16,8 @@ bridge_internal_routes:
 bridge_external_iface: "Wired connection 1"
 
 # firewall ansible policy level 
-pstat_firewall_profile: "access-level2-internal"
+pstat_firewall_profile: "access-level3-restricted"
+pstat_capabilities:
+  - campus_ssh
+  - admin_console
+  - network_bridge_transit

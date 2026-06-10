@@ -22,19 +22,18 @@
 
 - name: "Zone | {{ zone_name }} | Apply Capability-Based Rich Rules"
   ansible.posix.firewalld:
-    rich_rule: 'rule family="ipv4" source {{ rule.source }}'
+    rich_rule: >-
+      rule family="ipv4" source {{ rule.source if rule.source is defined else pstat_profile_sources[pstat_firewall_profile] | default('ipset:management') }}
+      {% if rule.service is defined %}service name="{{ rule.service }}"{% else %}port port="{{ rule.port }}" protocol="{{ rule.proto }}"{% endif %}
+      {{ rule.action }}
     state: enabled
     permanent: yes
     zone: "{{ zone_name }}"
-  # We only apply rules that match the current zone's purpose or a generic 'public' rule
   loop: "{{ pstat_capabilities | map('extract', pstat_capability_map) | flatten | flatten }}"
-  # NOTE: This is a simplified loop. I will refine the mapping in the final version
-  # to ensure 'campus_ssh' only goes to 'internal/public' etc.
   when: 
-    - rule.source is defined
-    - (zone_name == 'public' or rule.source != 'ipset:management')
-  # The 'management' rules are handled by the Global Policy, not the zone.
-  # We only apply the rule if it's a functional capability.
+    - (rule.service is defined or rule.port is defined)
+    - (zone_name == 'public' or (rule.source is not defined and pstat_profile_sources[pstat_firewall_profile | default('access-level3-restricted')] != 'ipset:management') or (rule.source is defined and rule.source != 'ipset:management'))
+
   
 # To properly implement the mapping, I'll refine the loop to use a a more precise filter
 # but for this V2 bootstrap, we ensure that a "Capability" adds a rule to the primary zone.

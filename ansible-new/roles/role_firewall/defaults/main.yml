@@ -14,8 +14,15 @@ pstat_ipsets:
     type: "hash:ip"
     ips: "{{ pstat_monitoring_ips }}"
   - name: backup-network
-    type: "hash:ip"
-    ips: "{{ pstat_backup_ips }}"
+    type: "hash:net"
+    ips: ["128.111.90.156/32"]
+
+# --- Profile Trust Mapping ---
+# Maps a firewall profile to the IPSet that defines its "Minimum Trust" boundary.
+pstat_profile_sources:
+  access-level1-public: "0.0.0.0/0"
+  access-level2-internal: "ipset:campus"
+  access-level3-restricted: "ipset:management"
 
 # --- Global Administrative Policies (The VIP Lanes) ---
 # Policies are processed BEFORE zones. They ensure admin access regardless of NIC zone.
@@ -28,19 +35,27 @@ pstat_firewall_policies:
       - { source: "ipset:management", service: "cockpit", action: "accept" }
 
 # --- Capability Registry ---
-# Maps human-readable capabilities to technical rich rules.
-# format: { capability_name: { rules: [ { source: 'ipset:name', port: 123, proto: 'tcp', action: 'accept' } ] } }
+# Maps functional capabilities to technical rules.
+# The 'source' is now determined dynamically by the host's pstat_firewall_profile.
 pstat_capability_map:
   monitoring_target:
     rules:
-      - { source: "ipset:monitoring", port: 9100, proto: "tcp", action: "accept" }
-      - { source: "ipset:monitoring", service: "snmp", action: "accept" }
+      - { port: 9100, proto: "tcp", action: "accept" }
+      - { service: "snmp", action: "accept" }
   backup_target:
     rules:
-      - { source: "ipset:backup-network", port: 9102, proto: "tcp", action: "accept" }
+      - { port: 9102, proto: "tcp", action: "accept" }
   campus_ssh:
     rules:
-      - { source: "ipset:campus", service: "ssh", action: "accept" }
+      - { service: "ssh", action: "accept" }
+  admin_console:
+    rules:
+      - { source: "ipset:management", port: 9090, proto: "tcp", action: "accept" }
+  network_bridge_transit:
+    rules:
+      - { transit: "internal-to-campus", action: "accept" }
+      - { transit: "campus-to-internal", action: "accept" }
+      - { transit: "internal-to-mgmt", action: "accept" }
 
 # --- Host Configuration ---
 # Default capabilities for all nodes (can be overridden in host_vars)

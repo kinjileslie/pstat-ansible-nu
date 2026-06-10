@@ -1,0 +1,30 @@
+---
+# manage_forwarding.yml
+# This task handles the FORWARD chain using a Capability-based model
+# instead of manual nft jump injections.
+
+- name: "Forwarding | Reset Forward Chain"
+  ansible.builtin.shell: |
+    firewall-cmd --permanent --remove-rich-rule='rule family="ipv4" action="accept"'
+  ignore_errors: yes
+
+- name: "Forwarding | Apply Transit Capabilities"
+  ansible.posix.firewalld:
+    rich_rule: >-
+      {% if rule.transit == 'internal-to-campus' %}
+      rule family="ipv4" source ipset:campus destination ipset:campus accept
+      {% elif rule.transit == 'campus-to-internal' %}
+      rule family="ipv4" source ipset:campus destination ipset:campus accept
+      {% elif rule.transit == 'internal-to-mgmt' %}
+      rule family="ipv4" source ipset:management destination ipset:campus accept
+      {% endif %}
+    state: enabled
+    permanent: yes
+    zone: "public" # Using public as the global transit zone
+  loop: "{{ pstat_capabilities | map('extract', pstat_capability_map) | flatten | flatten }}"
+  when: rule.transit is defined
+
+- name: "Forwarding | Enforce Default Drop for Transit"
+  ansible.builtin.shell: |
+    firewall-cmd --permanent --set-target=DROP --zone=public
+  when: pstat_firewall_profile == 'access-level3-restricted'
