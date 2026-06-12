@@ -1,6 +1,6 @@
 ---
 # Host vars for the PSTAT Web Server
-pstat_firewall_profile: "access-level2-internal"
+pstat_firewall_profile: "access-level1-public"
 
 pstat_capabilities:
   - web_server_base

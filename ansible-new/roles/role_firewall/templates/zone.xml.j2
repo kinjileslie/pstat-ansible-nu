@@ -2,10 +2,16 @@
 <zone target="{{ pstat_zone_target | default('DROP') }}">
   <!-- Build ID: {{ ansible_date_time.iso8601 }} -->
   <short>{{ zone_name }}</short>
+  {%- set profile_hierarchy = {'access-level1-public': 1, 'access-level2-internal': 2, 'access-level3-restricted': 3} -%}
+  {%- set host_level = profile_hierarchy[pstat_firewall_profile | default('access-level3-restricted')] -%}
   {%- for cap in pstat_capabilities -%}
     {%- set rule = pstat_capability_map[cap] -%}
     {%- if zone_name == 'public' -%}
-      {%- set source = rule.source if rule.source is defined else pstat_profile_sources[pstat_firewall_profile | default('access-level3-restricted')] -%}
+      {%- set req_profile = rule.profile | default('access-level1-public') -%}
+      {%- set req_level = profile_hierarchy[req_profile] -%}
+      {%- set final_level = [host_level, req_level] | max -%}
+      {%- set final_profile = (profile_hierarchy.items() | selectattr('1', 'equalto', final_level) | first)[0] -%}
+      {%- set source = pstat_profile_sources[final_profile] -%}
       <rule family="ipv4">
         {%- if source != 'public' -%}
         <source ipset="{{ source }}"/>

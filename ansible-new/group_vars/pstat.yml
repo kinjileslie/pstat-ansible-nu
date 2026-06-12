@@ -154,38 +154,47 @@ pstat_profile_sources:
   access-level2-internal: "campus"
   access-level3-restricted: "management"
 
-# Maps Capabilities to specific firewall rules (Port/Protocol/Action).
-# These are applied as Rich Rules in the public zone.
+# Maps Capabilities to specific firewall rules (Port/Protocol/Action/Requested Profile).
+# The 'profile' here is a REQUEST. The final rule is the MOST RESTRICTIVE of 
+# (this request vs the host's pstat_firewall_profile).
 pstat_capability_map:
   campus_ssh:
     port: "22"
     proto: "tcp"
     action: "accept"
+    profile: "access-level2-internal"
   admin_console:
     port: "9090"
     proto: "tcp"
     action: "accept"
+    profile: "access-level3-restricted"
   monitoring_target:
     port: "10050"
     proto: "tcp"
     action: "accept"
+    profile: "access-level3-restricted"
   backup_target:
     port: "9102"
     proto: "tcp"
     action: "accept"
+    profile: "access-level3-restricted"
   web_server_base:
     port: "80"
     proto: "tcp"
     action: "accept"
+    profile: "access-level1-public"
   web_server_ssl:
     port: "443"
     proto: "tcp"
     action: "accept"
+    profile: "access-level1-public"
   web_server_hardened:
     port: "443"
     proto: "tcp"
     action: "accept"
+    profile: "access-level1-public"
   web_server_monitored:
     port: "80"
     proto: "tcp"
     action: "accept"
+    profile: "access-level1-public"
