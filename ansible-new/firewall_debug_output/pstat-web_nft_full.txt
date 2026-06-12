@@ -179,7 +179,6 @@ table inet firewalld { # progname firewalld
 	}
 
 	chain filter_IN_public_allow {
-		tcp dport 443 accept
 	}
 
 	chain filter_IN_public_post {

@@ -1,0 +1,11 @@
+- name: "Web Hardened | Install ModSecurity"
+  ansible.builtin.dnf:
+    name: mod_security
+    state: present
+
+- name: "Web Hardened | Enable ModSecurity"
+  ansible.builtin.lineinfile:
+    path: /etc/httpd/conf.d/mod_security.conf
+    regexp: '^SecRuleEngine Off'
+    line: 'SecRuleEngine On'
+  notify: restart httpd

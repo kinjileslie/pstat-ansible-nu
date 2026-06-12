@@ -142,6 +142,12 @@ pstat_active_build_key: "{{ is_fips_enabled | ternary('nu_gold', 'nu_pink') }}"
 ansible_ssh_private_key_file: "{{ pstat_identity_registry[pstat_active_build_key].path }}"
 
 # 11. Firewall Policy Engine (Symmetry Model)
+# Defines the zones used by the L2 Shield.
+pstat_zones:
+  public: {}
+  internal: {}
+  trusted: {}
+
 # Maps high-level Access Profiles to their trusted source IPSet.
 pstat_profile_sources:
   access-level1-public: "public"
@@ -167,7 +173,19 @@ pstat_capability_map:
     port: "9102"
     proto: "tcp"
     action: "accept"
-  web_server:
+  web_server_base:
+    port: "80"
+    proto: "tcp"
+    action: "accept"
+  web_server_ssl:
     port: "443"
+    proto: "tcp"
+    action: "accept"
+  web_server_hardened:
+    port: "443"
+    proto: "tcp"
+    action: "accept"
+  web_server_monitored:
+    port: "80"
     proto: "tcp"
     action: "accept"

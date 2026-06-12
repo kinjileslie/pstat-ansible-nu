@@ -27,3 +27,27 @@
     - name: "CAPABILITY | Other L4 Services"
       debug:
         msg: "Other L4 services (PMM, Splunk, etc.) are currently on hold."
+
+    - name: "L4 | Web Server Base"
+      include_role:
+        name: role_web_server
+      when: "'web_server_base' in pstat_capabilities | default([])"
+      tags: [role_web_server, web_server]
+
+    - name: "L4 | Web Server SSL"
+      include_role:
+        name: role_web_server_ssl
+      when: "'web_server_ssl' in pstat_capabilities | default([])"
+      tags: [role_web_server_ssl, web_ssl]
+
+    - name: "L4 | Web Server Hardened"
+      include_role:
+        name: role_web_server_hardened
+      when: "'web_server_hardened' in pstat_capabilities | default([])"
+      tags: [role_web_server_hardened, web_hardened]
+
+    - name: "L4 | Web Server Monitored"
+      include_role:
+        name: role_web_server_monitored
+      when: "'web_server_monitored' in pstat_capabilities | default([])"
+      tags: [role_web_server_monitored, web_monitored]

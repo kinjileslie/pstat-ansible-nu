@@ -1,7 +1,11 @@
 ---
-# pstat-web - Campus Only (Level 2)
+# Host vars for the PSTAT Web Server
 pstat_firewall_profile: "access-level2-internal"
-is_fips_enabled: false
+
 pstat_capabilities:
-  - campus_ssh
-  - admin_console
+  - web_server_base
+  - web_server_ssl
+  - web_server_hardened
+  - web_server_monitored
+  - monitoring_target
+  - backup_target

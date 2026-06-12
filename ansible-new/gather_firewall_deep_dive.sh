@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # List of hosts to probe
-HOSTS=("tom" "dick" "harry")
+#HOSTS=("tom" "dick" "harry")
+HOSTS=("pstat-web")
 # Set output directory relative to the script location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_DIR="$SCRIPT_DIR/firewall_deep_dive"

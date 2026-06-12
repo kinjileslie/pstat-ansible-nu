@@ -1,0 +1,10 @@
+- name: "Web SSL | Install Certbot"
+  ansible.builtin.dnf:
+    name: certbot
+    state: present
+
+- name: "Web SSL | Ensure Certbot Timer is Enabled"
+  ansible.builtin.systemd:
+    name: certbot-renew.timer
+    state: started
+    enabled: yes

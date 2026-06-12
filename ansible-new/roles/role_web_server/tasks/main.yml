@@ -1,0 +1,19 @@
+- name: "Web | Install Apache and Tools"
+  ansible.builtin.dnf:
+    name:
+      - httpd
+      - httpd-tools
+      - mod_ssl
+    state: present
+
+- name: "Web | Enable and Start HTTPD"
+  ansible.builtin.systemd:
+    name: httpd
+    state: started
+    enabled: yes
+
+- name: "Web | Configure Basic Security Headers"
+  ansible.builtin.lineinfile:
+    path: /etc/httpd/conf/httpd.conf
+    line: "Header always set X-Frame-Options \"SAMEORIGIN\""
+    insertafter: 'EOF'

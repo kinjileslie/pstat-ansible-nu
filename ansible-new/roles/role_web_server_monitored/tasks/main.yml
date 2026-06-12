@@ -1,0 +1,6 @@
+- name: "Web Monitored | Enable mod_status"
+  ansible.builtin.lineinfile:
+    path: /etc/httpd/conf.d/status.conf
+    line: "ExtendedStatus On"
+    create: yes
+  notify: restart httpd
