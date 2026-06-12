@@ -1,0 +1,44 @@
+---
+- name: "Diagnostic: Ansible Template vs Copy Transport"
+  hosts: lloyd
+  become: yes
+  vars:
+    # Minimal variables to allow the template to render without crashing
+    zone_name: "test-zone"
+    pstat_zone_target: "DROP"
+    pstat_capabilities: []
+    pstat_capability_map: {}
+    pstat_profile_sources: {}
+    pstat_firewall_profile: "access-level3-restricted"
+  tasks:
+    - name: "Test A | Write trivial file using COPY (Sudo)"
+      ansible.builtin.copy:
+        content: "COPY TEST - {{ ansible_date_time.iso8601 }}"
+        dest: "/etc/ansible_copy_test.txt"
+        mode: '0644'
+
+    - name: "Test C | Write trivial file using TEMPLATE (Sudo)"
+      ansible.builtin.template:
+        src: dummy.j2
+        dest: "/etc/ansible_template_test.txt"
+        mode: '0644'
+
+    - name: "Test D | Write actual zone.xml.j2 to /etc (Sudo)"
+      ansible.builtin.template:
+        src: roles/role_firewall/templates/zone.xml.j2
+        dest: "/etc/firewalld/zones/debug_zone.xml"
+        mode: '0644'
+
+    - name: "Verification | Read all tests"
+      ansible.builtin.shell: |
+        echo "--- COPY ---"
+        cat /etc/ansible_copy_test.txt
+        echo "--- TEMPLATE ---"
+        cat /etc/ansible_template_test.txt
+        echo "--- ZONE XML ---"
+        cat /etc/firewalld/zones/debug_zone.xml
+      register: final_results
+
+    - name: "Display Results"
+      ansible.builtin.debug:
+        var: final_results.stdout_lines

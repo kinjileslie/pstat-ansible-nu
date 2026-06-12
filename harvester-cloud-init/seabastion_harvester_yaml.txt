@@ -1,0 +1,243 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  annotations:
+    field.cattle.io/description: 'A bastion host for the sea. '
+    harvesterhci.io/mac-address: '{"default":"3a:15:d6:24:ba:a4"}'
+    harvesterhci.io/vmRunStrategy: RerunOnFailure
+    harvesterhci.io/volumeClaimTemplates: >-
+      [{"metadata":{"name":"seabastion-disk-0-74het","annotations":{"harvesterhci.io/imageId":"default/image-8jbpn"}},"spec":{"accessModes":["ReadWriteMany"],"resources":{"requests":{"storage":"48Gi"}},"volumeMode":"Block","storageClassName":"longhorn-image-8jbpn"}},{"metadata":{"name":"seabastion-disk-1-n2mfg"},"spec":{"accessModes":["ReadWriteMany"],"resources":{"requests":{"storage":"100Gi"}},"volumeMode":"Block","storageClassName":"harvester-longhorn"}}]
+    kubevirt.io/latest-observed-api-version: v1
+    kubevirt.io/storage-observed-api-version: v1
+    network.harvesterhci.io/ips: '[]'
+  creationTimestamp: '2026-06-10T22:34:07Z'
+  finalizers:
+    - kubevirt.io/virtualMachineControllerFinalize
+    - wrangler.cattle.io/VMController.CleanupPVCAndSnapshot
+  generation: 17
+  labels:
+    harvesterhci.io/creator: harvester
+    harvesterhci.io/os: linux
+  managedFields:
+    - apiVersion: kubevirt.io/v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:annotations:
+            f:kubevirt.io/latest-observed-api-version: {}
+            f:kubevirt.io/storage-observed-api-version: {}
+          f:finalizers:
+            .: {}
+            v:"kubevirt.io/virtualMachineControllerFinalize": {}
+      manager: virt-controller
+      operation: Update
+      time: '2026-06-10T22:34:07Z'
+    - apiVersion: kubevirt.io/v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:status:
+          .: {}
+          f:conditions: {}
+          f:desiredGeneration: {}
+          f:observedGeneration: {}
+          f:printableStatus: {}
+          f:runStrategy: {}
+          f:volumeSnapshotStatuses: {}
+      manager: virt-controller
+      operation: Update
+      subresource: status
+      time: '2026-06-11T00:05:07Z'
+    - apiVersion: kubevirt.io/v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:annotations:
+            .: {}
+            f:field.cattle.io/description: {}
+            f:harvesterhci.io/mac-address: {}
+            f:harvesterhci.io/vmRunStrategy: {}
+            f:harvesterhci.io/volumeClaimTemplates: {}
+            f:network.harvesterhci.io/ips: {}
+          f:finalizers:
+            v:"wrangler.cattle.io/VMController.CleanupPVCAndSnapshot": {}
+          f:labels:
+            .: {}
+            f:harvesterhci.io/creator: {}
+            f:harvesterhci.io/os: {}
+        f:spec:
+          .: {}
+          f:runStrategy: {}
+          f:template:
+            .: {}
+            f:metadata:
+              .: {}
+              f:annotations:
+                .: {}
+                f:harvesterhci.io/sshNames: {}
+              f:labels:
+                .: {}
+                f:harvesterhci.io/vmName: {}
+            f:spec:
+              .: {}
+              f:affinity:
+                .: {}
+                f:nodeAffinity:
+                  f:preferredDuringSchedulingIgnoredDuringExecution: {}
+              f:domain:
+                .: {}
+                f:cpu:
+                  .: {}
+                  f:cores: {}
+                  f:sockets: {}
+                  f:threads: {}
+                f:devices:
+                  .: {}
+                  f:disks: {}
+                  f:inputs: {}
+                  f:interfaces: {}
+                f:features:
+                  .: {}
+                  f:acpi:
+                    .: {}
+                    f:enabled: {}
+                f:machine:
+                  .: {}
+                  f:type: {}
+                f:resources:
+                  .: {}
+                  f:limits:
+                    .: {}
+                    f:cpu: {}
+                    f:memory: {}
+              f:evictionStrategy: {}
+              f:hostname: {}
+              f:networks: {}
+              f:terminationGracePeriodSeconds: {}
+              f:volumes: {}
+      manager: harvester
+      operation: Update
+      time: '2026-06-11T00:06:00Z'
+  name: seabastion
+  namespace: pstat
+  resourceVersion: '482008964'
+  uid: a3f0d200-57d7-4948-8bb7-fe24224048fe
+spec:
+  runStrategy: Halted
+  template:
+    metadata:
+      annotations:
+        harvesterhci.io/sshNames: '[]'
+      creationTimestamp: null
+      labels:
+        harvesterhci.io/vmName: seabastion
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: network.harvesterhci.io/mgmt
+                    operator: In
+                    values:
+                      - 'true'
+      architecture: amd64
+      domain:
+        cpu:
+          cores: 4
+          maxSockets: 1
+          sockets: 1
+          threads: 1
+        devices:
+          disks:
+            - bootOrder: 1
+              disk:
+                bus: virtio
+              name: disk-0
+            - bootOrder: 2
+              disk:
+                bus: virtio
+              name: disk-1
+            - disk:
+                bus: virtio
+              name: cloudinitdisk
+          inputs:
+            - bus: usb
+              name: tablet
+              type: tablet
+          interfaces:
+            - bridge: {}
+              macAddress: 56:22:fd:8a:5f:00
+              model: virtio
+              name: default
+            - bridge: {}
+              macAddress: 3a:15:d6:24:ba:a4
+              model: virtio
+              name: nic-1
+        features:
+          acpi:
+            enabled: true
+        firmware:
+          serial: e1aa5c26-8b16-4118-bcb2-c11556fc3943
+          uuid: fd3ba563-b7b1-4879-be51-db16c9ad4067
+        machine:
+          type: q35
+        memory:
+          guest: 8Gi
+        resources:
+          limits:
+            cpu: '4'
+            memory: 8Gi
+          requests:
+            cpu: 250m
+            memory: 5461Mi
+      evictionStrategy: LiveMigrateIfPossible
+      hostname: seabastion
+      networks:
+        - multus:
+            networkName: harvester-public/1173
+          name: default
+        - multus:
+            networkName: default/2176
+          name: nic-1
+      terminationGracePeriodSeconds: 120
+      volumes:
+        - name: disk-0
+          persistentVolumeClaim:
+            claimName: seabastion-disk-0-74het
+        - name: disk-1
+          persistentVolumeClaim:
+            claimName: seabastion-disk-1-n2mfg
+        - cloudInitNoCloud:
+            networkDataSecretRef:
+              name: seabastion-atqle
+            secretRef:
+              name: seabastion-atqle
+          name: cloudinitdisk
+status:
+  conditions:
+    - lastProbeTime: '2026-06-11T00:05:07Z'
+      lastTransitionTime: '2026-06-11T00:05:07Z'
+      message: VMI does not exist
+      reason: VMINotExists
+      status: 'False'
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: null
+      status: 'True'
+      type: LiveMigratable
+    - lastProbeTime: null
+      lastTransitionTime: null
+      status: 'True'
+      type: StorageLiveMigratable
+  desiredGeneration: 14
+  observedGeneration: 14
+  printableStatus: Stopped
+  runStrategy: Halted
+  volumeSnapshotStatuses:
+    - enabled: true
+      name: disk-0
+    - enabled: true
+      name: disk-1
+    - enabled: false
+      name: cloudinitdisk
+      reason: Snapshot is not supported for this volumeSource type [cloudinitdisk]

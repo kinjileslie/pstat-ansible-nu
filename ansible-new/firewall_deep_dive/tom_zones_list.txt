@@ -1,0 +1,1 @@
+block dmz drop external home internal nm-shared public trusted work

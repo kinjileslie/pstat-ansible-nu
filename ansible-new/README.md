@@ -58,6 +58,7 @@ These layers follow an **Explicit Orchestration** model. Instead of hidden boole
     - **Capability-Based Model**: Instead of server-specific roles, we use "Capability" roles (e.g., `role_network_bridge`) triggered by variables in `host_vars`.
     - **Registry**: See [CAPABILITIES.md](./CAPABILITIES.md) for a full list of available toggles and their required variables.
     - **Network Bridge (Core-and-Spoke)**: Solves the "Default Route Collision" during multi-interface provisioning.
+        - **Symmetric Routing**: The bridge no longer uses manual `nft` jump injections. Transit permissions are now managed as "Capabilities" within the `role_firewall` framework.
         - **Persistence Strategy**: Uses `ipv4.route-metric` to anchor the Public Interface (`eth1`) as the primary gateway (Metric 50) while allowing the Internal Interface (`eth0`) to exist as a secondary (Metric 100+).
         - **Stability**: This ensures that even when DHCP pushes competing gateways, the "Management Path" remains open and survives reboots.
     - **Example**: A node marked as `is_network_bridge: true` will automatically receive the "Core-and-Spoke" routing configuration to bridge the 1173/2176 VLANs.
@@ -75,7 +76,7 @@ These layers follow an **Explicit Orchestration** model. Instead of hidden boole
         - **Container Resource Guarding**: Investigate system-wide overrides for `pids_limit` and `keyctl` (maxkeys/maxbytes) to support high-density container workloads.
     - **Identity Evolution (Key-Duo)**: [PLANNING] Transition from a single build key to a "Polyglot" identity model.
         - Use `ansible_ssh_private_key_file` in `host_vars` to dynamically select between Ed25519 (Nu-Pink) for standard nodes and ECDSA (Nu-Gold) for FIPS-compliant nodes.
-        -, This removes the bottleneck of a hardcoded key in `ansible.cfg` and prevents `MaxAuthTries` lockouts.
+        - This removes the bottleneck of a hardcoded key in `ansible.cfg` and prevents `MaxAuthTries` lockouts.
     - **Management Perimeter**: [TODO] Finalize and add all legitimate Bastion/Jump host IPs to the `management` IPSet.
     - **VLAN Trust Model**: [TODO] Decide on the trust level for the 1173 network (e.g., "Full Trust" vs. "Restricted Service Access") and implement in the firewall policy.
 - **L5 (User Apps)**: Researcher tools (e.g., RStudio, Podman).
@@ -101,34 +102,35 @@ ansible-playbook -i inventories/pstat.ini deploy_l4_system_apps.yml --limit <hos
 
 ### 📖 Engineer's Notebook: Troubleshooting the Shield
 
-This project encountered significant "tooling friction" during the L2 rollout. To avoid the "Nuke and Pave" trap, follow this verification methodology when system tools appear to be "lying":
+This project encountered significant \"tooling friction\" during the L2 rollout. To avoid the \"Nuke and Pave\" trap, follow this verification methodology when system tools appear to be \"lying\":
 
-#### 1. The "Anti-Nuke" Protocol
+#### 1. The \"Anti-Nuke\" Protocol
 Before deciding a tool is broken and pivoting to a custom implementation:
 - **Strip Abstractions**: Stop using Ansible/scripts. Run commands manually in a raw shell.
 - **Primitive Syntax**: Avoid modern flags (e.g., `nmcli -g` or `-f`). Use the most basic positional arguments and parse with `grep`/`cut`.
-- **Verify State, Not Return Code**: A "success" from a daemon (`firewall-cmd`) only means the daemon updated its database. Always verify the **Kernel State** (the actual truth).
+- **Verify State, Not Return Code**: A \"success\" from a daemon (`firewall-cmd`) only means the daemon updated its database. Always verify the **Kernel State** (the actual truth).
 
 #### 2. The `nmcli` Compatibility Trap
-- **The Issue**: Certain `nmcli` versions reject field-specific flags (`-g`, `-f`) as "invalid fields."
-- **The Verified Path**: Use "Primitive Terse" mode for UUID discovery:
-  `nmcli -t connection show --active | grep ":<iface>$" | cut -d: -f2`
+- **The Issue**: Certain `nmcli` versions reject field-specific flags (`-g`, `-f`) as \"invalid fields.\"
+- **The Verified Path**: Use \"Primitive Terse\" mode for UUID discovery:
+  `nmcli -t connection show --active | grep \":<iface>$\" | cut -d: -f2`
 - **The Binding Sequence**: `UUID Discovery` $\rightarrow$ `nmcli connection modify <UUID> connection.zone <zone>` $\rightarrow$ `nmcli connection up <UUID>`.
 
 #### 3. Native `nftables` vs. Legacy `ipset`
 - **The Issue**: Using `ipset list` on AlmaLinux 9 returns empty results, leading to the false conclusion that the firewall is not populated.
-- **The Truth**: AlmaLinux 9 uses native `nftables` sets. The `ipset` binary talks to a different kernel module that `firewalld` no longer uses.
+- **The Truth**: AlmaLinux 9 uses native `nftables` sets. The `ipset` binary talks to a different kernel module that `firewalld` doesn't use.
 - **The Source of Truth**: Always use `nft list set inet firewalld <set_name>` to verify IPSet population.
 
-#### 4. Interface Authority (The "Gravity" Problem)
+#### 4. Interface Authority (The \"Gravity\" Problem)
 - **The Issue**: `firewall-cmd --zone=... --add-interface=...` often fails to persist across reloads.
 - **The Truth**: NetworkManager connection profiles (`.nmconnection`) override `firewalld` zone assignments.
 - **The Fix**: You must modify the specific **UUID** of the active NetworkManager profile to change the zone.
 
-#### 5. Policy Syntax & Idempotency (The \"V2\" struggle)
-- **CLI Constraints**: `firewall-cmd` does not allow setting ingress and egress zones in a single command; they must be separate `--add-ingress-zone` and `--add-egress-zone` calls.
-- **Target Logic**: To prevent global lockouts while allowing specific rules, policies should use `--set-target CONTINUE`. This allows the policy to handle its rules and then \"pass the baton\" back to the zone selector for remaining traffic.
-- **Idempotency**: `new-policy` will return a `NAME_CONFLICT` if the policy exists; this should be ignored in Ansible.
+#### 6. The \"Silent Failure\" of the Template Module
+- **The Issue**: On existing AlmaLinux 9 nodes, `ansible.builtin.template` reported \"changed\" or \"ok,\" but the bytes on disk remained unchanged (frozen in time), while working perfectly on fresh images.
+- **The Root Cause**: Likely a failure in the atomic move (temp file $\rightarrow$ destination) due to OS-level locks, SELinux contexts, or `firewalld` monitoring the directory.
+- **The Fix**: Implement a \"Nuclear Wipe\" using a direct shell command (`sudo rm -f /etc/firewalld/zones/*.xml`) immediately before the templating task to break any existing state or locks.
+- **The Lesson**: When the transport layer lies, verify with a \"Canary\" (Build ID timestamp) and test against a raw \"Control Node\" image.
 
 ## 🚫 SSH Connection Stability (The \"Idle Timeout\" Mystery)
 
@@ -144,14 +146,14 @@ SSH sessions and sshfs mounts from `seabastion` to target nodes are disconnectin
 4. **Timing**: Disconnects occur after ~45-60 minutes, which is not the default to 10-minute timeout or the CUI 30-minute timeout.
 
 ### Root Cause
-Network firewall/NAT device between `seabastion` and target nodes is killing idle TCP connections after ~45-60 minutes without sending graceful FIN packets. The client/server don't realize the connection is dead until they try to use it.
+Network firewall/NAT device between `seabastion` and target nodes is killing idle TCP connections after ~45-60 minutes without sending an graceful FIN packets. The client/server don't realize the connection is dead until they try to use it.
 
 ### Proposed Solution
 Add server-side SSH keepalives to `seabastion`:
 ```bash
 # Create keepalive config
 echo \"ClientAliveInterval 30\" | sudo tee /etc/ssh/sshd_config.d/99-keepalive.conf
-echo \"ClientAliveCountMax 3\" | sudo tee -a /etc/ssh/sshd_config.d/99-keepalive.conf
+echo \"ClientAliveCountPMax 3\" | sudo tee -a /etc/ssh/sshd_config.d/99-keepalive.conf
 
 # Reload SSHD
 sudo systemctl reload sshd
@@ -160,15 +162,13 @@ sudo systemctl reload sshd
 sshd -T | grep -i clientalive
 ```
 
-This makes `seabastion` send a keepalive packet every 30 seconds to the client, which the firewall will see as active traffic, preventing it from killing the connection.
-
 ### Status
 Investigation complete, proposed solution documented. Awaiting implementation and verification.
 
 ## 🛡️ Compliance (Layer 3)
 Compliance is managed as an optional overlay. Use `deploy_l3.3_compliance.yml` with the following tags:
 
-| Tier | Tags | Description |
+| Tier | Tag | Description |
 | :--- | :--- | :--- |
 | **Baseline** | `low_complexity,no_reboot_needed` | Basic security tools & system baseline. |
 | **Standard** | `low_complexity,medium_complexity,no_reboot_needed` | Tightens filesystem mounts and SSH timeouts. |
@@ -180,36 +180,3 @@ To maintain a balance between standard baseline and node-specific needs, we use 
 - **Role Defaults (`roles/*/defaults/main.yml`)**: Define the **Implementation Baseline**. (e.g., \"Standard volume sizes: `/home` is 20GB, `/tmp` is 10GB\"). This is the \"blueprint.\"\n- **Group Variables (`group_vars/pstat.yml`)**: Define the **Fleet Policy**. (e.g., \"All volumes must use the `nofail` mount option\"). This is the \"governance.\"\n- **Host Variables (`host_vars/*.yml`)**: Define **Exceptions**. (e.g., \"This specific node needs 100GB for `/home`, and others use a 15% buffer).
 
 **Why?** This allows us to change the fleet-wide policy (e.g, updating mount options) in one place without touching the underlying structural blueprints of the roles.
-
-### ⚠️ Operational Exceptions
-To maintain system stability and support the \"Layer Cake\" architecture, the following CUI controls are explicitly disabled:
-
-- **`subscription-manager`**: Not applicable to AlmaLinux.
-- **`usbguard`**: Not applicable to Harvester VMs.
-- **`fapolicyd`**: Disabled to prevent blocking of administrative scripts and custom binaries.
-- **`authselect` / `pam_faillock`**: Deferred to Layer 4 (Identity) to prevent conflicts with LDAP/SSSD integration and avoid accidental lockouts.
-- **`/var/log/audit` Mount Options**: Deferred to `role_lvm_fortress` and `role_xfs_quotas` to prevent overwriting `nofail` and custom XFS accounting options.
-- **SELinux**: Set to `permissive` via CUI overrides to prevent administrative lockouts during initial rollout; will be evaluated for `enforcing` during L4 application testing.
-- **SSH Daemon (`sshd`)**: All CUI-driven `sshd` modifications are disabled. All SSH hardening is centrally managed by `role_ssh_hardening` to ensure jump-chain stability.
-
-**Current Status**: 
-- **Baseline**: L1 and L2 fully operational.
-- **Storage**: L3.1 (Fortress) and L3.2 (Quotas) verified on `reforger` fleet.
-- **Compliance**: L3.3 (CUI) verified with operational Ed25519 override on `reforger-01` (now `seabastion`).
-- **Plumbing**: L4 capability-based model implemented; `role_network_bridge` verified for multi-VLAN routing.
-- **Open Items**:
-    - Validate the overlap between low and medium complexity controls in the RHEL9 CUI role.
-    - Update `role_lvm_fortress` to the \"CUI-Complete\" layout (add `/var/tmp` and `/home`).
-    - Isolate `/var/tmp` via LVM to prevent root partition exhaustion (CUI requirement).
-    - Execute the \"Home Pivot\" to `/local/home` to isolate user data from OS.
-    - Implement legally legally compliant \"California-grade\" MOTD (Privacy/Monitoring warnings).
-    - Implement a \"Dynamic Announcement\" system: 
-        - Use `/etc/issue` as the static legal \"No Trespassing\" sign.
-        - Use `/etc/motd` as a dynamic bulletin board for maintenance alerts, managed via a dedicated `deploy_announcement.yml` playbook.
-    - **[OPEN] Firewall Policy Validation**: Perform rigorous cross-node testing for all three access levels (`public`, `internal`, `restricted`).
-        - Verify `sauza` (Campus) can still access `internal` zone services.
-        - Verify `flanker`/`ctrl1` (Management) can still access `trusted` zone services under all levels.
-        - Confirm \"Total Lockout\" on `access-level3-restricted` for all non-management IPs.
-    - **[OPEN] SSSD/KCM Log Error**: Resolve `sssd_kcm` failure to open `/var/log/sssd/sssd_kcm.log` (No such file or directory) on `seabastion`.
-    - **[OPEN] SSH `maxauthtries` Recovery**: Document a reproducible method to clear an IP from the target's fail-list after hitting the maximum authentication attempts limit.
-    - [ON HOLD] Layer 4 (Plumbing): Identity (LDAP/SSSD) and Monitoring.

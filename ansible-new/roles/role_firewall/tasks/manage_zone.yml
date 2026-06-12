@@ -3,36 +3,26 @@
 # Instead of simple service toggles, this task iterates through 
 # the node's assigned capabilities and applies the corresponding rich rules.
 
-- name: "Zone | {{ zone_name }} | Nuke existing zone config (Atomic Reset)"
-  ansible.builtin.file:
-    path: "/etc/firewalld/zones/{{ zone_name }}.xml"
-    state: absent
+- name: "Zone | {{ zone_name }} | Nuclear Wipe (Clear directory state)"
+  ansible.builtin.shell: "sudo rm -f /etc/firewalld/zones/{{ zone_name }}.xml"
+  changed_when: true
 
-- name: "Zone | {{ zone_name }} | Re-create zone with DROP target"
-  ansible.posix.firewalld:
-    zone: "{{ zone_name }}"
-    state: present
-    target: DROP
-    permanent: yes
+- name: "Zone | {{ zone_name }} | Generate and Apply Zone XML (Bypassing Broken API)"
+  ansible.builtin.template:
+    src: zone.xml.j2
+    dest: "/etc/firewalld/zones/{{ zone_name }}.xml"
+    mode: '0644'
+  notify: reload firewalld
 
-- name: "Zone | {{ zone_name }} | Strip default SSH service to prevent leaks"
-  ansible.builtin.command: "firewall-cmd --permanent --zone={{ zone_name }} --remove-service=ssh"
+- name: "Zone | {{ zone_name }} | Strip default services to prevent leaks"
+  ansible.builtin.command: "firewall-cmd --permanent --zone={{ zone_name }} --remove-service={{ item }}"
+  loop:
+    - ssh
+    - cockpit
+    - dhcpv6-client
+    - http
   changed_when: false
   failed_when: false
-
-- name: "Zone | {{ zone_name }} | Apply Capability-Based Rich Rules"
-  ansible.posix.firewalld:
-    rich_rule: >-
-      rule family="ipv4" source {{ rule.source if rule.source is defined else pstat_profile_sources[pstat_firewall_profile] | default('ipset:management') }}
-      {% if rule.service is defined %}service name="{{ rule.service }}"{% else %}port port="{{ rule.port }}" protocol="{{ rule.proto }}"{% endif %}
-      {{ rule.action }}
-    state: enabled
-    permanent: yes
-    zone: "{{ zone_name }}"
-  loop: "{{ pstat_capabilities | map('extract', pstat_capability_map) | flatten | flatten }}"
-  when: 
-    - (rule.service is defined or rule.port is defined)
-    - (zone_name == 'public' or (rule.source is not defined and pstat_profile_sources[pstat_firewall_profile | default('access-level3-restricted')] != 'ipset:management') or (rule.source is defined and rule.source != 'ipset:management'))
 
   
 # To properly implement the mapping, I'll refine the loop to use a a more precise filter

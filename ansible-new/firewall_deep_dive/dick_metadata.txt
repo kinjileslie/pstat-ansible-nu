@@ -1,0 +1,1 @@
+-rw-r--r--. 1 root root 333 Jun 12 20:37 /etc/firewalld/zones/public.xml

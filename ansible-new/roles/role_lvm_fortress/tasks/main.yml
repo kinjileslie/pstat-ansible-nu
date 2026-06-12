@@ -51,25 +51,72 @@
     - "{{ pstat_lv_local_mount }}"
 
 - name: Mount LVs and update fstab
-  mount:
-    path: "{{ item.mount }}"
-    src: "/dev/mapper/{{ pstat_lvm_vg_name }}-{{ item.lv }}"
-    fstype: xfs
-    opts: "{{ item.opts }}"
-    state: mounted
-  loop:
-    - { lv: 'lv_audit', mount: "{{ pstat_lv_audit_mount }}", opts: "{{ pstat_lv_audit_options }}" }
-    - { lv: 'lv_log', mount: "{{ pstat_lv_log_mount }}", opts: "{{ pstat_lv_log_options }}" }
-    - { lv: 'lv_tmp', mount: "{{ pstat_lv_tmp_mount }}", opts: "{{ pstat_lv_tmp_options }}" }
-    - { lv: 'lv_vartmp', mount: "{{ pstat_lv_vartmp_mount }}", opts: "{{ pstat_lv_vartmp_options }}" }
-    - { lv: 'lv_home', mount: "{{ pstat_lv_home_mount }}", opts: "{{ pstat_lv_home_options }}" }
-    - { lv: 'lv_local', mount: "{{ pstat_lv_local_mount }}", opts: "{{ pstat_lv_local_options }}" }
+  block:
+    - name: "LVM | Mount non-home LVs"
+      mount:
+        path: "{{ item.mount }}"
+        src: "/dev/mapper/{{ pstat_lvm_vg_name }}-{{ item.lv }}"
+        fstype: xfs
+        opts: "{{ item.opts }}"
+        state: mounted
+      loop:
+        - { lv: 'lv_log', mount: "{{ pstat_lv_log_mount }}", opts: "{{ pstat_lv_log_options }}" }
+        - { lv: 'lv_audit', mount: "{{ pstat_lv_audit_mount }}", opts: "{{ pstat_lv_audit_options }}" }
+        - { lv: 'lv_tmp', mount: "{{ pstat_lv_tmp_mount }}", opts: "{{ pstat_lv_tmp_options }}" }
+        - { lv: 'lv_vartmp', mount: "{{ pstat_lv_vartmp_mount }}", opts: "{{ pstat_lv_vartmp_options }}" }
+        - { lv: 'lv_local', mount: "{{ pstat_lv_local_mount }}", opts: "{{ pstat_lv_local_options }}" }
+
+    - name: "LVM | Handle /home migration"
+      block:
+        - name: "LVM | Create temporary mount point for home migration"
+          file:
+            path: /mnt/home_migration
+            state: directory
+            mode: '0755'
+
+        - name: "LVM | Mount new home LV to temporary location"
+          mount:
+            path: /mnt/home_migration
+            src: "/dev/mapper/{{ pstat_lvm_vg_name }}-lv_home"
+            fstype: xfs
+            opts: "{{ pstat_lv_home_options }}"
+            state: mounted
+
+        - name: "LVM | Migrate existing home data to new LV"
+          shell: "rsync -aX /home/ /mnt/home_migration/"
+          changed_when: true
+
+        - name: "LVM | Unmount temporary migration point"
+          mount:
+            path: /mnt/home_migration
+            state: unmounted
+
+        - name: "LVM | Mount new home LV to /home"
+          mount:
+            path: "{{ pstat_lv_home_mount }}"
+            src: "/dev/mapper/{{ pstat_lvm_vg_name }}-lv_home"
+            fstype: xfs
+            opts: "{{ pstat_lv_home_options }}"
+            state: mounted
+
+        - name: "LVM | Remove temporary mount point"
+          file:
+            path: /mnt/home_migration
+            state: absent
+
+    - name: "LVM | Sync and Settle Mounts"
+      shell: "sync && ls -d {{ pstat_lv_audit_mount }} {{ pstat_lv_home_mount }} {{ pstat_lv_local_mount }} && sleep 2"
+      changed_when: false
 
 - name: Ensure critical security mount points have correct SELinux labels
-  ansible.builtin.command: restorecon -Rv {{ item }}
+  shell: "restorecon -Rv {{ item }}"
   loop:
     - "{{ pstat_lv_audit_mount }}"
     - "{{ pstat_lv_log_mount }}"
+  register: restorecon_result
+  until: restorecon_result.rc == 0
+  retries: 5
+  delay: 1
   changed_when: false
 
 - name: Restore home directory for the deployment user

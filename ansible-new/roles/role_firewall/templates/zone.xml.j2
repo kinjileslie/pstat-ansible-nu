@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<zone target="{{ pstat_zone_target | default('DROP') }}">
+  <!-- Build ID: {{ ansible_date_time.iso8601 }} -->
+  <short>{{ zone_name }}</short>
+  {%- for cap in pstat_capabilities -%}
+    {%- set rule = pstat_capability_map[cap] -%}
+    {%- if zone_name == 'public' -%}
+      {%- set source = rule.source if rule.source is defined else pstat_profile_sources[pstat_firewall_profile | default('access-level3-restricted')] -%}
+      <rule family="ipv4">
+        {%- if source != 'public' -%}
+        <source ipset="{{ source }}"/>
+        {%- endif -%}
+        {%- if rule.port is defined -%}
+        <port port="{{ rule.port }}" protocol="{{ rule.proto }}"/>
+        {%- else -%}
+        <service name="{{ rule.service }}"/>
+        {%- endif -%}
+        <{{ rule.action }}/>
+      </rule>
+    {%- endif -%}
+  {%- endfor -%}
+</zone>

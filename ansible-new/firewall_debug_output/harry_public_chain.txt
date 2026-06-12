@@ -1,0 +1,36 @@
+		jump filter_IN_public_allow
+		jump filter_IN_public_post
+		jump filter_INPUT_POLICIES_post
+		drop
+	}
+
+	chain filter_IN_public_pre {
+	}
+
+	chain filter_IN_public_log {
+	}
+
+	chain filter_IN_public_deny {
+	}
+
+	chain filter_IN_public_allow {
+		ip saddr @management tcp dport 22 accept
+		ip saddr @management tcp dport 9090 accept
+	}
+
+	chain filter_IN_public_post {
+	}
+
+	chain nat_POST_public {
+		jump nat_POSTROUTING_POLICIES_pre
+		jump nat_POST_public_pre
+		jump nat_POST_public_log
+		jump nat_POST_public_deny
+		jump nat_POST_public_allow
+		jump nat_POST_public_post
+		jump nat_POSTROUTING_POLICIES_post
+	}
+
+	chain nat_POST_public_pre {
+	}
+

@@ -1,0 +1,6 @@
+-rw-r--r--. 1 root root 285 Jun 12 20:37 /etc/firewalld/zones/public.xml
+<?xml version="1.0" encoding="utf-8"?>$
+<zone target="DROP">$
+  <!-- Build ID: 2026-06-12T20:37:32Z -->$
+  <short>public</short><rule family="ipv4"><port port="22" protocol="tcp"/><accept/>$
+      </rule><rule family="ipv4"><port port="9090" protocol="tcp"/><accept/>$

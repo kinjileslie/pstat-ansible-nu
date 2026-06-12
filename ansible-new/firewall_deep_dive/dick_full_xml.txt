@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>$
+<zone target="DROP">$
+  <!-- Build ID: 2026-06-12T20:37:32Z -->$
+  <short>public</short><rule family="ipv4"><source ipset="campus"/><port port="22" protocol="tcp"/><accept/>$
+      </rule><rule family="ipv4"><source ipset="campus"/><port port="9090" protocol="tcp"/><accept/>$
+      </rule></zone>$
