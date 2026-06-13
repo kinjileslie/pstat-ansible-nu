@@ -1,0 +1,6 @@
+---
+# PHP handler to ensure changes to www.conf are applied
+- name: restart php-fpm
+  ansible.builtin.systemd:
+    name: php-fpm
+    state: restarted

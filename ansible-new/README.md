@@ -1,182 +1,50 @@
-# PSTAT Ansible Modernization
-This project transforms the PSTAT node configuration from legacy monolithic roles into an atomic, layered architecture (The Layer Cake).
+# Ansible-Nu: PSTAT Infrastructure Orchestration
 
-## 🚀 Quick Start for Operators
+## 🎯 Project Goal
+Modernize Ansible configuration for PSTAT nodes (AlmaLinux 9) using an atomic, layered architecture (The Layer Cake), resolving SSH persistence, implementing a flexible identity model, and ensuring system stability through resource isolation and secure firewall policies.
 
-### 1. Baseline Deployment
-To bring a new node up to the current L1/L2 baseline:
+## 🏗️ Architecture: The Layer Cake
+We utilize a tiered deployment strategy to ensure a deterministic system state:
+- **Layer 1 (System Base)**: OS updates, NTP, repos, core tools, and basic users.
+- **Layer 2 (The Shield)**: The "Symmetry" Firewall model.
+- **Layer 3 (Fortress & Compliance)**: LVM partitioning, XFS quotas, and CUI compliance hardening.
+- **Layer 4 (Capabilities)**: Application-specific roles (Web Server, Network Bridge, PHP Engine, Resource Guardrails).
 
-**Step A: Provisioning**
-1. Deploy a new VM in Harvester using the latest `kinji_pstat.yml` (v1.2.0 "Absolute Zero").
-2. Ensure a second volume is attached if LVM partitioning is required for the target environment.
+## 🛡️ The Symmetry Firewall Model (V3)
+The firewall is designed as a "Dark Box" (Default DROP) with a "VIP Lane" for admins.
 
-**Step B: Configuration**
-Run the full baseline integration test:
-```bash
-# Run the full baseline integration test
-ansible-playbook -i inventories/pstat.ini test_l1_safe.yml --limit <hostname>
-```
+### 1. The Global Policy (Break-Glass)
+A Global Policy `mgmt-ssh` provides a permanent administrative bypass. If the source IP is in the `management` IPSet, access is granted regardless of the zone's target.
 
-**Note on Provisioning**: New VMs are instantiated via Cloud-Init with a minimal "Absolute Zero" configuration. This provides the **Build Keys** and the `qemu-guest-agent`. All other users, keys, and packages are handled by the Ansible pipeline.
-- **Nu-Pink (Ed25519)**: Standard provisioning key.
-- **Nu-Gold (ECDSA)**: Hardened/FIPS provisioning key; required for the strict compliance build path.
+### 2. The Symmetry Ceiling (Trust Hierarchy)
+Security is managed via a "Ceiling" model. Each host has a `pstat_firewall_profile` which acts as the hard limit for all services:
+- `access-level1-public`: (Value 1) Open to the world.
+- `access-level2-internal`: (Value 2) Restricted to the Campus IPSet.
+- `access-level3-restricted`: (Value 3) Restricted to the Management IPSet.
 
-Alternatively, run specific layers:
-- **Layer 1 (Base)**: `ansible-playbook -i inventories/pstat.ini deploy_l1_base.yml --limit <hostname>`
-- **Layer 2 (Shield)**: Perimeter security. Now utilizes a **Capability-Based Firewall** model:
-    - **The "VIP Lane" (Global Policy)**: Administrative access is decoupled from network zones using a `firewalld` Policy (`mgmt-ssh`). This ensures that management traffic is accepted *before* zone selection, eliminating the "Campus Hijack" (where overlapping CIDRs cause admin traffic to be routed to the wrong zone).
-    - **The Stealth Posture (Default DROP)**: All zones (Public, Internal, Trusted) are set to `target: DROP`. This creates a "Dark Box" effect where the server ignores all traffic unless an explicit identity-based rule exists.
-    - **Identity-Based Capabilities**: Instead of enabling services, nodes are assigned "Capabilities" (e.g., `monitoring_target`, `backup_target`, `campus_ssh`). These map to **Rich Rules** that allow specific IPSets to access specific ports.
-    - **Interface Labels**: Zones are used simply as labels for the NICs (e.g., `eth0` $\rightarrow$ `public`). This separates the physical connection from the security policy.
-    - **Verification**: On AlmaLinux 9, `firewalld` uses native `nftables` sets. **DO NOT** use `ipset list` for verification. Use `nft list set inet firewalld <set_name>` to verify IPSet population.
-    - **Interface Authority**: NetworkManager profiles override `firewalld` zone assignments. Interfaces are bound to zones via `nmcli` using the connection UUID to ensure persistence.
+**Logic**: `Final Trust Level = MAX(Host Ceiling, Capability Request)`.
+A "Campus" server cannot be made "Public" via a capability; it will always be clamped to the Campus level unless the host profile is reclassified.
 
-### 2. Verifying Node State
-To check if a node has been correctly provisioned and see the audit trail:
+### 3. Capability-Based Access
+Functional access is granted via capabilities in `host_vars`.
+- Example: `web_server_base` $\rightarrow$ Opens port 80/443.
+- Example: `monitoring_target` $\rightarrow$ Opens port 10050.
 
-- **Check Audit Logs (The "Flight Recorder")**:
-  `journalctl -t ansible-audit`
-  (This shows a chronological list of every role successfully applied by Ansible).
+## 🚀 Deployment Sequence
+To provision a new node:
+1. `deploy_l1_base.yml` $\rightarrow$ Basic OS and Connectivity.
+2. `deploy_l2_shield_v2.yml` $\rightarrow$ Establish the security posture.
+3. `deploy_l3.1_fortress.yml` $\rightarrow$ LVM partitions.
+4. `deploy_l3.2_quotas.yml` $\rightarrow$ Disk quotas.
+5. `deploy_l3.3_compliance.yml` $\rightarrow$ CUI Hardening.
+6. `deploy_l4_system_apps.yml` $\rightarrow$ Add specific capabilities (Web, Bridge, PHP, etc.).
 
-- **Check Local Audit File**:
-  `cat /var/log/ansible-provisioning/audit.log`
+## 🗝️ Identity Model
+- **Nu-Pink (Ed25519)**: Standard Administrative Build Key.
+- **Nu-Gold (ECDSA)**: FIPS-compliant key used when `is_fips_enabled: true`.
+- **Provisioning**: Cloud-Init provides initial trust to the management host.
 
-- **Check Firewall Policy Version**:
-  `cat /etc/ansible/firewall_version.txt`
-
-### 3. Layer 3, 4, and 5 (Advanced Deployment)
-These layers follow an **Explicit Orchestration** model. Instead of hidden booleans, we use tags to specify exactly which "Capabilities" to install.
-
-- **Layer 3 (Hardening)**: Optional high-security benchmarks. Now split into a sequenced pipeline:
-    - **L3.1 Storage Foundation**: `deploy_l3.1_fortress.yml` (LVM partitioning).
-    - **L3.2 Storage Accounting**: `deploy_l3.2_quotas.yml` (XFS accounting).
-    - **L3.3 Security Policy**: `deploy_l3.3_compliance.yml` (CUI/STIG hardening via `RedHatOfficial.rhel9_cui` with integrated operational overrides).
-    - *Note*: Policy can be applied without the Foundation for "semi-hardened" nodes.
-    - **Connectivity**: Use the provided `ansible.cfg` (enabling `ControlMaster` and `pipelining`) to prevent network-level session resets and SSH lockouts during rapid task execution.
-
-- **L4 (System Apps/Plumbing)**: Core infrastructure and capability-based configurations.
-    - **Capability-Based Model**: Instead of server-specific roles, we use "Capability" roles (e.g., `role_network_bridge`) triggered by variables in `host_vars`.
-    - **Registry**: See [CAPABILITIES.md](./CAPABILITIES.md) for a full list of available toggles and their required variables.
-    - **Network Bridge (Core-and-Spoke)**: Solves the "Default Route Collision" during multi-interface provisioning.
-        - **Symmetric Routing**: The bridge no longer uses manual `nft` jump injections. Transit permissions are now managed as "Capabilities" within the `role_firewall` framework.
-        - **Persistence Strategy**: Uses `ipv4.route-metric` to anchor the Public Interface (`eth1`) as the primary gateway (Metric 50) while allowing the Internal Interface (`eth0`) to exist as a secondary (Metric 100+).
-        - **Stability**: This ensures that even when DHCP pushes competing gateways, the "Management Path" remains open and survives reboots.
-    - **Example**: A node marked as `is_network_bridge: true` will automatically receive the "Core-and-Spoke" routing configuration to bridge the 1173/2176 VLANs.
-    - **Resource Guardrails (`role_resource_guardrails`)**: Protects system stability from unbounded user workloads by containing memory pressure within the user's own Cgroup slice.
-        - **Implementation**: Deploys `user-.slice` overrides to enforce `MemoryHigh` and `MemoryMax` limits.
-        - **Quotas**: Default limits are dynamically calculated as **75% (High)** and **85% (Max)** of total system RAM.
-        - **Control**: Defaults to **ON** for all nodes. Can be disabled per-host via `enable_resource_guardrails: false` in `host_vars`.
-        - **Goal**: Prevents "Global OOM" events (where the kernel kills random system processes) by ensuring a 15% system buffer is always available for the OS and management agents.
-    - **Identity & Observability**: [TODO] Integrate LDAP/SSSD and Monitoring agents.
-    - **Symmetry Cleanup**: [TODO] Remove the "Emergency" `PubkeyAcceptedAlgorithms` override from L3 compliance playbooks once the `is_fips_enabled` toggle is verified fleet-wide.
-    - **L4-Tuning**: [TODO] Remove "Canary" debug prints from `role_network_bridge`.
-    - **Zone Semantic Relabeling**: [TODO] Transition the primary interface label from `trusted` $\rightarrow$ `public` to align the zone name with physical exposure and remove the semantic irony of a "trusted" zone that is set to `target: DROP`.
-    - **System Stability (Anti-OOM)**: [TODO] Expand `role_resource_guardrails` to include:
-        - **OOM Management**: Enable and tune `systemd-oomd` to use PSI (Pressure Stall Information) to kill the largest memory hog within the user slice *before* the kernel triggers a global OOM event.
-        - **Container Resource Guarding**: Investigate system-wide overrides for `pids_limit` and `keyctl` (maxkeys/maxbytes) to support high-density container workloads.
-    - **Identity Evolution (Key-Duo)**: [PLANNING] Transition from a single build key to a "Polyglot" identity model.
-        - Use `ansible_ssh_private_key_file` in `host_vars` to dynamically select between Ed25519 (Nu-Pink) for standard nodes and ECDSA (Nu-Gold) for FIPS-compliant nodes.
-        - This removes the bottleneck of a hardcoded key in `ansible.cfg` and prevents `MaxAuthTries` lockouts.
-    - **Management Perimeter**: [TODO] Finalize and add all legitimate Bastion/Jump host IPs to the `management` IPSet.
-    - **VLAN Trust Model**: [TODO] Decide on the trust level for the 1173 network (e.g., "Full Trust" vs. "Restricted Service Access") and implement in the firewall policy.
-- **L5 (User Apps)**: Researcher tools (e.g., RStudio, Podman).
-
-## 🗺️ Future Infrastructure Evolution
-- **Migration Path**: Transition from legacy management hosts (bobby/race/ctrl1) to a new, self-provisioned jump host built using these scripts ("Dogfooding").
-- **Identity Goal**: Shift from local identity management to centralized LDAP/SSSD.
-- **Storage Challenge**: Evaluate alternatives to Longhorn for large user data volumes (500GB+), as Longhorn performance degrades at scale. Explore Ceph or other sovereign storage solutions.
-
-**Usage**:
-```bash
-ansible-playbook -i inventories/pstat.ini deploy_l4_system_apps.yml --limit <hostname> --tags "splunk,pmm"
-```
-*Note: In the future, common tag sets can be defined in `group_vars` to automate the selection of standard capabilities.*
-
-## 🛠 Maintenance Notes
-- **Firewall Versioning**: A known technical debt item; the current `/etc/ansible/firewall_version.txt` is static. Future work is needed to implement a dynamic version string that reflects the active `pstat_firewall_profile` and policy version.
-- **Agent Context**: For detailed technical history, decision logs, and AI-specific context, refer to [ansible_agent_context.txt](./ansible_agent_context.txt).
-- **Adding Jump Hosts**: Add new IPs to `group_vars/pstat.yml` under `pstat_mgmt_ips`. This automatically updates both the Firewall and Fail2Ban ignore lists.
-- **Customizing Roles**: All logic is atomic. To change a specific feature, edit the role in `roles/` and run the corresponding `deploy_lX.yml` playbook.
-- **Key Path Fragility**: SSH private key paths in `pstat_identity_registry` are currently hardcoded to specific home directories. This will break if the management user or host changes. Needs transition to environment variables or project-relative paths.
-- **Administrative Coordination**: For high-level roadmap, stakeholder syncs, and personal assistant context, refer to [kinji-personal-assistant.md](./kinji-personal-assistant.md).
-
-### 📖 Engineer's Notebook: Troubleshooting the Shield
-
-This project encountered significant \"tooling friction\" during the L2 rollout. To avoid the \"Nuke and Pave\" trap, follow this verification methodology when system tools appear to be \"lying\":
-
-#### 1. The \"Anti-Nuke\" Protocol
-Before deciding a tool is broken and pivoting to a custom implementation:
-- **Strip Abstractions**: Stop using Ansible/scripts. Run commands manually in a raw shell.
-- **Primitive Syntax**: Avoid modern flags (e.g., `nmcli -g` or `-f`). Use the most basic positional arguments and parse with `grep`/`cut`.
-- **Verify State, Not Return Code**: A \"success\" from a daemon (`firewall-cmd`) only means the daemon updated its database. Always verify the **Kernel State** (the actual truth).
-
-#### 2. The `nmcli` Compatibility Trap
-- **The Issue**: Certain `nmcli` versions reject field-specific flags (`-g`, `-f`) as \"invalid fields.\"
-- **The Verified Path**: Use \"Primitive Terse\" mode for UUID discovery:
-  `nmcli -t connection show --active | grep \":<iface>$\" | cut -d: -f2`
-- **The Binding Sequence**: `UUID Discovery` $\rightarrow$ `nmcli connection modify <UUID> connection.zone <zone>` $\rightarrow$ `nmcli connection up <UUID>`.
-
-#### 3. Native `nftables` vs. Legacy `ipset`
-- **The Issue**: Using `ipset list` on AlmaLinux 9 returns empty results, leading to the false conclusion that the firewall is not populated.
-- **The Truth**: AlmaLinux 9 uses native `nftables` sets. The `ipset` binary talks to a different kernel module that `firewalld` doesn't use.
-- **The Source of Truth**: Always use `nft list set inet firewalld <set_name>` to verify IPSet population.
-
-#### 4. Interface Authority (The \"Gravity\" Problem)
-- **The Issue**: `firewall-cmd --zone=... --add-interface=...` often fails to persist across reloads.
-- **The Truth**: NetworkManager connection profiles (`.nmconnection`) override `firewalld` zone assignments.
-- **The Fix**: You must modify the specific **UUID** of the active NetworkManager profile to change the zone.
-
-#### 6. The \"Silent Failure\" of the Template Module
-- **The Issue**: On existing AlmaLinux 9 nodes, `ansible.builtin.template` reported \"changed\" or \"ok,\" but the bytes on disk remained unchanged (frozen in time), while working perfectly on fresh images.
-- **The Root Cause**: Likely a failure in the atomic move (temp file $\rightarrow$ destination) due to OS-level locks, SELinux contexts, or `firewalld` monitoring the directory.
-- **The Fix**: Implement a \"Nuclear Wipe\" using a direct shell command (`sudo rm -f /etc/firewalld/zones/*.xml`) immediately before the templating task to break any existing state or locks.
-- **The Lesson**: When the transport layer lies, verify with a \"Canary\" (Build ID timestamp) and test against a raw \"Control Node\" image.
-
-## 🚫 SSH Connection Stability (The \"Idle Timeout\" Mystery)
-
-### The Problem
-SSH sessions and sshfs mounts from `seabastion` to target nodes are disconnecting after ~45-60 minutes of idle time, despite `systemd-linger` and `ControlMaster` being enabled.
-
-### Investigation Findings
-1. **CUI `IdleActionSec=1800` NOT Applied**: The CUI role's `var_logind_session_timeout: '1800'` setting is not appearing in `/etc/systemd/logind.conf` on `seabastion`. Verified via `systemd-analyze cat-config`.
-2. **SSH Keepalive Configurations**:
-   - Server-side (`ClientAliveInterval 0`): Disabled (seabastion doesn't send keepalives)
-   - Client-side (`ServerAliveInterval 300`): Enabled on `flanker` (client sends every 5 min)
-3. **sshfs \"Ghost Mounts\"**: Mounts show as active in `df -h` but are actually dead after idle, confirming network-level disconnect.
-4. **Timing**: Disconnects occur after ~45-60 minutes, which is not the default to 10-minute timeout or the CUI 30-minute timeout.
-
-### Root Cause
-Network firewall/NAT device between `seabastion` and target nodes is killing idle TCP connections after ~45-60 minutes without sending an graceful FIN packets. The client/server don't realize the connection is dead until they try to use it.
-
-### Proposed Solution
-Add server-side SSH keepalives to `seabastion`:
-```bash
-# Create keepalive config
-echo \"ClientAliveInterval 30\" | sudo tee /etc/ssh/sshd_config.d/99-keepalive.conf
-echo \"ClientAliveCountPMax 3\" | sudo tee -a /etc/ssh/sshd_config.d/99-keepalive.conf
-
-# Reload SSHD
-sudo systemctl reload sshd
-
-# Verify
-sshd -T | grep -i clientalive
-```
-
-### Status
-Investigation complete, proposed solution documented. Awaiting implementation and verification.
-
-## 🛡️ Compliance (Layer 3)
-Compliance is managed as an optional overlay. Use `deploy_l3.3_compliance.yml` with the following tags:
-
-| Tier | Tag | Description |
-| :--- | :--- | :--- |
-| **Baseline** | `low_complexity,no_reboot_needed` | Basic security tools & system baseline. |
-| **Standard** | `low_complexity,medium_complexity,no_reboot_needed` | Tightens filesystem mounts and SSH timeouts. |
-| **Strict** | `low_complexity,medium_complexity,high_complexity` | Full audit enforcement and restrictive network policies. |
-
-### ⚙️ Architecture: Policy vs. Implementation (The \"Symmetry\" Model)
-To maintain a balance between standard baseline and node-specific needs, we use a split-variable strategy for LVM and Hardening:
-
-- **Role Defaults (`roles/*/defaults/main.yml`)**: Define the **Implementation Baseline**. (e.g., \"Standard volume sizes: `/home` is 20GB, `/tmp` is 10GB\"). This is the \"blueprint.\"\n- **Group Variables (`group_vars/pstat.yml`)**: Define the **Fleet Policy**. (e.g., \"All volumes must use the `nofail` mount option\"). This is the \"governance.\"\n- **Host Variables (`host_vars/*.yml`)**: Define **Exceptions**. (e.g., \"This specific node needs 100GB for `/home`, and others use a 15% buffer).
-
-**Why?** This allows us to change the fleet-wide policy (e.g, updating mount options) in one place without touching the underlying structural blueprints of the roles.
+## ⚠️ Critical Operational Notes
+- **LVM Mounts**: Always run `restorecon` on new LVM mounts to fix SELinux `unlabeled_t` issues that block `auditd`.
+- **PHP-in-HTML**: For legacy sites using `.html` for PHP, the `php-fpm.conf` must have `.html` added to `security.limit_extensions`.
+- **Firewall XML**: Templates must have the XML declaration at character 0 and follow the strict RHEL 9 sequence: `<zone target="...">` $\rightarrow$ `<short>` $\rightarrow$ `<rule>`.

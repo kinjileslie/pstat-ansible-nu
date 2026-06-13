@@ -1,0 +1,45 @@
+---
+- name: "PHP | Install and Configure PHP-FPM"
+  block:
+    - name: "PHP | Install PHP and FPM"
+      ansible.builtin.dnf:
+        name:
+          - php
+          - php-fpm
+          - php-common
+          - php-gd
+          - php-mbstring
+          - php-xml
+          - php-mysqlnd
+        state: present
+
+    - name: "PHP | Ensure PHP-FPM is started and enabled"
+      ansible.builtin.systemd:
+        name: php-fpm
+        state: started
+        enabled: yes
+
+    - name: "PHP | Configure PHP-FPM for Apache"
+      ansible.builtin.lineinfile:
+        path: /etc/php-fpm.d/www.conf
+        regexp: '^listen ='
+        line: 'listen = /run/php-fpm/www.sock'
+      notify: restart php-fpm
+
+    - name: "PHP | Set socket permissions"
+      ansible.builtin.lineinfile:
+        path: /etc/php-fpm.d/www.conf
+        regexp: '^listen.owner ='
+        line: 'listen.owner = apache'
+      notify: restart php-fpm
+
+    - name: "PHP | Set socket group"
+      ansible.builtin.lineinfile:
+        path: /etc/php-fpm.d/www.conf
+        regexp: '^listen.group ='
+        line: 'listen.group = apache'
+      notify: restart php-fpm
+
+  tags:
+    - role_php
+    - php

@@ -3,6 +3,7 @@
 pstat_firewall_profile: "access-level1-public"
 
 pstat_capabilities:
+  - php_engine
   - web_server_base
   - web_server_ssl
   - web_server_hardened

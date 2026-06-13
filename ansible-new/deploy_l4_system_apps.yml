@@ -28,6 +28,12 @@
       debug:
         msg: "Other L4 services (PMM, Splunk, etc.) are currently on hold."
 
+    - name: "L4 | PHP Engine"
+      ansible.builtin.import_role:
+        name: role_php
+      when: "'php_engine' in pstat_capabilities"
+      tags: [role_php, php]
+
     - name: "L4 | Web Server Base"
       include_role:
         name: role_web_server

@@ -158,6 +158,11 @@ pstat_profile_sources:
 # The 'profile' here is a REQUEST. The final rule is the MOST RESTRICTIVE of 
 # (this request vs the host's pstat_firewall_profile).
 pstat_capability_map:
+  php_engine:
+    port: null
+    proto: null
+    action: null
+    profile: "access-level3-restricted"
   campus_ssh:
     port: "22"
     proto: "tcp"
