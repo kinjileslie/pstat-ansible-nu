@@ -2,27 +2,32 @@
 <zone target="{{ pstat_zone_target | default('DROP') }}">
   <!-- Build ID: {{ ansible_date_time.iso8601 }} -->
   <short>{{ zone_name }}</short>
-  {%- set profile_hierarchy = {'access-level1-public': 1, 'access-level2-internal': 2, 'access-level3-restricted': 3} -%}
-  {%- set host_level = profile_hierarchy[pstat_firewall_profile | default('access-level3-restricted')] -%}
-  {%- for cap in pstat_capabilities -%}
-    {%- set rule = pstat_capability_map[cap] -%}
-    {%- if zone_name == 'public' -%}
-      {%- set req_profile = rule.profile | default('access-level1-public') -%}
-      {%- set req_level = profile_hierarchy[req_profile] -%}
-      {%- set final_level = [host_level, req_level] | max -%}
-      {%- set final_profile = (profile_hierarchy.items() | selectattr('1', 'equalto', final_level) | first)[0] -%}
-      {%- set source = pstat_profile_sources[final_profile] -%}
+  {% set profile_hierarchy = {'access-level1-public': 1, 'access-level2-internal': 2, 'access-level3-restricted': 3} %}
+  {% set host_level = profile_hierarchy[pstat_firewall_profile | default('access-level3-restricted')] %}
+  {% for cap in pstat_capabilities %}
+    {% set rule = pstat_capability_map[cap] %}
+    {% if zone_name == 'public' %}
+      {# Only create a rule if there is actually a port or service defined (not null) #}
+      {% if rule.get('port') or rule.get('service') or rule.get('proto') == 'icmp' %}
+        {% set req_profile = rule.get('profile', 'access-level1-public') %}
+        {% set req_level = profile_hierarchy[req_profile] %}
+        {% set final_level = [host_level, req_level] | max %}
+        {% set final_profile = (profile_hierarchy.items() | selectattr('1', 'equalto', final_level) | first)[0] %}
+        {% set source = pstat_profile_sources[final_profile] %}
       <rule family="ipv4">
-        {%- if source != 'public' -%}
+        {% if source != 'public' %}
         <source ipset="{{ source }}"/>
-        {%- endif -%}
-        {%- if rule.port is defined -%}
-        <port port="{{ rule.port }}" protocol="{{ rule.proto }}"/>
-        {%- else -%}
-        <service name="{{ rule.service }}"/>
-        {%- endif -%}
-        <{{ rule.action }}/>
+        {% endif %}
+        {% if rule.get('proto') == 'icmp' %}
+        {# ICMP has no ports; protocol is implied by the rule context or handled by the action #}
+        {% elif rule.get('port') %}
+        <port port="{{ rule.get('port') }}" protocol="{{ rule.get('proto') }}"/>
+        {% elif rule.get('service') %}
+        <service name="{{ rule.get('service') }}"/>
+        {% endif %}
+        <{{ rule.get('action', 'accept') }}/>
       </rule>
-    {%- endif -%}
-  {%- endfor -%}
+      {% endif %}
+    {% endif %}
+  {% endfor %}
 </zone>

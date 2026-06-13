@@ -1,6 +1,6 @@
 # PSTAT Infrastructure Decision Log
 
-## 🛡️ Firewall & Security
+#### 🛡️ Firewall & Security
 - **Decision**: Adopt "Symmetry V3" (Ceiling Model).
   - **Reasoning**: Prevents "accidental" public exposure. A host's `pstat_firewall_profile` acts as a hard limit. Even if a role requests a 'Public' port, the host's 'Internal' profile will clamp it to the Campus IPSet.
 - **Decision**: Use a Global Policy (`mgmt-ssh`) for admin access.
@@ -9,6 +9,10 @@
   - **Reasoning**: The module was overwriting custom XMLs with default templates, wiping rich rules and changing the target from DROP to DEFAULT.
 - **Decision**: Use a "Nuclear Wipe" (`rm -f`) before templating zone files.
   - **Reasoning**: AlmaLinux 9's atomic-move fails silently if a file exists, leading to "Ghost XMLs" where Ansible reports 'changed' but the disk remains old.
+- **Decision**: Temporary unification of Management and Monitoring IPs.
+  - **Reasoning**: To accelerate the deployment of observability tools (Nagios/Centreon), monitoring IPs are temporarily added to the `management` IPSet.
+- **Decision**: Protocol-specific rich rules for ICMP.
+  - **Reasoning**: ICMP cannot use `<port>` tags. The template was updated to omit the port tag when `proto == 'icmp'`, preventing `INVALID_ZONE` parser crashes.
 
 ## 💾 Storage & Compliance
 - **Decision**: Symmetric LVM Home Migration.

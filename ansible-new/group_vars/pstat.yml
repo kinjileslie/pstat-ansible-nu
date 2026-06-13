@@ -50,6 +50,8 @@ pstat_base_packages:
 
 # 3. Management & Jump Host Identities
 # These IPs are trusted for SSH and are ignored by Fail2Ban.
+# NOTE: Currently includes Monitoring servers (Nagios/Centreon) as a temporary 
+# simplification until a dedicated 'monitoring' IPSet is implemented.
 pstat_mgmt_ips:
   - 169.231.230.113  # eddie.lsit.ucsb.edu
   - 128.111.90.175   # albedo.lsit.ucsb.edu
@@ -59,6 +61,8 @@ pstat_mgmt_ips:
   - 128.111.219.20   # sauza.pstat.ucsb.edu
   - 10.2.17.199      # seabastion (Internal)
   - 169.231.229.92   # seabastion (Management)
+  - 169.231.234.39   # nagios.aristotle.ucsb.edu
+  - 169.231.230.29   # centreon.lsit.ucsb.edu
 
 # 4. Backup Infrastructure
 pstat_backup_ips:
@@ -158,6 +162,16 @@ pstat_profile_sources:
 # The 'profile' here is a REQUEST. The final rule is the MOST RESTRICTIVE of 
 # (this request vs the host's pstat_firewall_profile).
 pstat_capability_map:
+  network_ping:
+    port: null
+    proto: "icmp"
+    action: "accept"
+    profile: "access-level3-restricted"
+  snmp_target:
+    port: "161"
+    proto: "udp"
+    action: "accept"
+    profile: "access-level3-restricted"
   php_engine:
     port: null
     proto: null
