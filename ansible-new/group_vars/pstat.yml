@@ -55,7 +55,7 @@ pstat_base_packages:
 pstat_mgmt_ips:
   - 169.231.230.113  # eddie.lsit.ucsb.edu
   - 128.111.90.175   # albedo.lsit.ucsb.edu
-  - 169.231.235.191  # bob.aristotle.ucsb.edu
+  - 169.231.229.23   # bobby.lsit.ucsb.edu
   - 128.111.126.115  # dlr.lsit.ucsb.edu
   - 128.111.90.54    # unifi.lscg.ucsb.edu
   - 128.111.219.20   # sauza.pstat.ucsb.edu
