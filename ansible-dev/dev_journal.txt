@@ -5,10 +5,8 @@
 **LVM Lesson**: `vgremove` and `pvremove` can fail if `auditd` or other system services hold files open. The most efficient recovery path for LVM iterative testing is a Harvester "Replace Existing" snapshot restore.
 **Provisioning State**: `forger16` and `forger17` now have symmetrical L1/L2 baselines and L3 `/local` storage.
 
-## [2026-05-26] L3 Fortress Completion and Stabilization
-**Achievement**: Successfully implemented the full Layer 3 (LVM + Quotas) pipeline.
-**Key Technical Fixes**:
-- Standardized on `/dev/mapper/` device paths in `fstab` to ensure mount reliability.
-- Implemented `nofail` mount options and a `systemd` override for `auditd.service` (`RequiresMountsFor=/var/log/audit`) to eliminate Emergency Mode boot-loops.
-- Enabled XFS User, Group, and Project quota accounting on `/local` and `/tmp`.
-**Final State**: `forger19` and `forger20` are now fully built to the L3 baseline. Both nodes have been powered down and snapshotted at this state, providing a stable, verified recovery point before moving to Layer 4.
+## [2026-06-20] Connectivity Pivot: Bypassing Ctrl1
+**Incident**: Realized the multi-hop jump chain (Flanker $\rightarrow$ DLR $\rightarrow$ Bobby $\rightarrow$ UFO-Race $\rightarrow$ Ctrl1 $\rightarrow$ VM) was creating significant instability and latency.
+**Resolution**: Moved Ansible execution entirely to `flanker.pstat`.
+**Benefit**: Drastic reduction in complexity and failure points. Connectivity is now direct from the workstation to the Harvester VMs.
+**Baseline Verification**: Confirmed firewall Symmetry levels (Public/Internal/Restricted) on VMs `tom`, `dick`, and `harry`.

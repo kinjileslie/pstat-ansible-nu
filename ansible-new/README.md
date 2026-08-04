@@ -45,6 +45,8 @@ To provision a new node:
 - **Provisioning**: Cloud-Init provides initial trust to the management host.
 
 ## ⚠️ Critical Operational Notes
+- **Connectivity**: Ansible is executed directly from `flanker.pstat` to the target hosts. The previous `ctrl1` jump-host strategy has been deprecated as it was inefficient and unstable.
+- **Verification**: Firewall precedence and Symmetry levels have been verified on target VMs `tom` (Public), `dick` (Internal), and `harry` (Restricted).
 - **LVM Mounts**: Always run `restorecon` on new LVM mounts to fix SELinux `unlabeled_t` issues that block `auditd`.
 - **PHP-in-HTML**: For legacy sites using `.html` for PHP, the `php-fpm.conf` must have `.html` added to `security.limit_extensions`.
 - **Firewall XML**: Templates must have the XML declaration at character 0 and follow the strict RHEL 9 sequence: `<zone target="...">` $\rightarrow$ `<short>` $\rightarrow$ `<rule>`.
