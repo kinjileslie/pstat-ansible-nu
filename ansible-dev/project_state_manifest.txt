@@ -5,7 +5,7 @@
 The following files contain the strategic and technical blueprint:
 - ansible_architecture_plan.txt: The "Layer Cake" design, role mappings, and harvest list.
 - ansible_agent_context.txt: Internal AI logic, goals, and "North Star" principles.
-- network_topology.txt: The deprecated multi-hop SSH chain (Flanker -> DLR -> Bobby -> UFO-Race -> Ctrl1 -> VM). Current connectivity is direct from flanker.pstat.
+- network_topology.txt: The deprecated multi-hop SSH chain. Current connectivity is direct from flanker.pstat to hosts, though seabastion remains the designated Admin Bastion for secure jump-host access to isolated networks.
 - decision_log.md: Record of technical decisions and rationales to prevent decision drift.
 - long_term_vision.md: Roadmap for GitOps, AWX automation, and Harvester integration.
 - dev_journal.txt: Record of "hard-won" lessons and traps encountered during setup.

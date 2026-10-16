@@ -47,3 +47,12 @@ The "bugginess" we encountered is located in the **firewalld Python Daemon**, wh
 **Decision**: Bypass `firewalld`'s interface binding.
 **Implementation**: Use `nmcli` to bind the interface UUID to the zone.
 **Reasoning**: NetworkManager overrides `firewalld` configuration; modifying the NM profile is the only way to ensure persistence.
+
+## 7. nftables Direct‑Rule Workaround
+**Problem**: `firewall-cmd --direct` refuses all `--add-rule` commands on AlmaLinux 9 (firewalld 1.3.4). The daemon also owns the `inet firewalld` table, preventing external `nft` modifications.
+
+**Solution**: Deploy an **independent nftables table** (`inet pstat_forward`) that hooks the `FORWARD` chain at priority `-10` (runs before firewalld’s `+10`). The table defines two IP sets (`pstat_mgmt_fwd` and `pstat_ts_fwd`) and a forward chain with a default `drop` policy, accepting only traffic from those sets and allowing established/related return traffic.
+
+**Result**: Forwarding is now source‑aware, firewalld’s broken direct API is completely bypassed, and the security posture persists across firewalld reloads.
+
+**Lesson**: When firewalld’s direct interface is broken, use a custom nftables table that runs at a higher priority to enforce forwarding policies. Persist the table via `/etc/nftables.d/` and load it after the final firewalld reload.

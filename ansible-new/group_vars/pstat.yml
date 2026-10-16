@@ -217,3 +217,15 @@ pstat_capability_map:
     proto: "tcp"
     action: "accept"
     profile: "access-level1-public"
+  network_bridge_transit:
+    port: null
+    proto: null
+    action: "accept"
+    profile: "access-level1-public"
+    transit_rules:
+      - { transit: "internal-to-campus", source: "ipset:management", action: "accept" }
+      - { transit: "campus-to-internal", source: "ipset:management", action: "accept" }
+      - { transit: "internal-to-mgmt", source: "ipset:management", action: "accept" }
+      - { transit: "internal-to-campus", source: "ipset:tailscale", action: "accept" }
+      - { transit: "campus-to-internal", source: "ipset:tailscale", action: "accept" }
+      - { transit: "internal-to-mgmt", source: "ipset:tailscale", action: "accept" }

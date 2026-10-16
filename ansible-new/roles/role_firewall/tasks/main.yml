@@ -5,12 +5,6 @@
     state: started
     enabled: yes
 
-- name: Ensure firewalld is running
-  ansible.builtin.systemd:
-    name: firewalld
-    state: started
-    enabled: yes
-
 - name: "FIREWALL | Sanitize Environment (Pre-Reload)"
   ansible.builtin.shell: "sudo rm -f /etc/firewalld/zones/*.xml /etc/firewalld/ipsets/*.xml"
   changed_when: true
@@ -52,6 +46,9 @@
 - name: "FIREWALL | Final Reload to Synchronize Kernel State"
   ansible.builtin.shell: "firewall-cmd --reload"
   changed_when: true
+
+- name: "FIREWALL | Apply Source-Aware Forwarding Rules (Secure Pivot, post-reload)"
+  ansible.builtin.include_tasks: manage_forwarding.yml
 
 - name: Write Firewall Policy Version Breadcrumb
   ansible.builtin.copy:

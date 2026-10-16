@@ -16,6 +16,9 @@ pstat_ipsets:
   - name: backup-network
     type: "hash:net"
     ips: ["128.111.90.156/32"]
+  - name: tailscale
+    type: "hash:net"
+    ips: ["100.120.0.0/24"]
 
 # --- Profile Trust Mapping ---
 # Maps a firewall profile to the IPSet that defines its "Minimum Trust" boundary.
@@ -53,9 +56,12 @@ pstat_capability_map:
       - { source: "ipset:management", port: 9090, proto: "tcp", action: "accept" }
   network_bridge_transit:
     rules:
-      - { transit: "internal-to-campus", action: "accept" }
-      - { transit: "campus-to-internal", action: "accept" }
-      - { transit: "internal-to-mgmt", action: "accept" }
+      - { transit: "internal-to-campus", source: "ipset:management", action: "accept" }
+      - { transit: "campus-to-internal", source: "ipset:management", action: "accept" }
+      - { transit: "internal-to-mgmt", source: "ipset:management", action: "accept" }
+      - { transit: "internal-to-campus", source: "ipset:tailscale", action: "accept" }
+      - { transit: "campus-to-internal", source: "ipset:tailscale", action: "accept" }
+      - { transit: "internal-to-mgmt", source: "ipset:tailscale", action: "accept" }
 
 # --- Host Configuration ---
 # Default capabilities for all nodes (can be overridden in host_vars)

@@ -10,3 +10,12 @@
 **Resolution**: Moved Ansible execution entirely to `flanker.pstat`.
 **Benefit**: Drastic reduction in complexity and failure points. Connectivity is now direct from the workstation to the Harvester VMs.
 **Baseline Verification**: Confirmed firewall Symmetry levels (Public/Internal/Restricted) on VMs `tom`, `dick`, and `harry`.
+
+## [2026-06-20] Architecture Pivot: SeaBastion as Admin Bastion
+**Decision**: Redefined `seabastion` from a "Network Bridge/Router" to a "Secure Admin Bastion."
+**Technical Shift**:
+- Removed Layer 3 routing/forwarding logic (no more `ip_forward` or static kernel routes).
+- Maintained dual-homing for physical connectivity to Management and Internal networks.
+- Focused on SSH ProxyJump and TCP Tunnelling at the application layer.
+- Kept `access-level3-restricted` to ensure only the Management IP-set can access the bastion.
+**Goal**: Minimize the security surface area while maintaining the ability to jump into isolated segments of the fleet.

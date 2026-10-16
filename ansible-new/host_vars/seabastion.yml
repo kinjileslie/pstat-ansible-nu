@@ -1,23 +1,20 @@
----
-# Host variables for the SeaBastion bridge node
-is_network_bridge: true
-is_ldap_enabled: false  # Management host - not a user login node
+# Host variables for the SeaBastion Admin Jump Host
+# Role: Secure entry point for system administration (Admin Bastion).
+# This host provides a secure jump point for SSH ProxyJump and TCP tunnelling 
+# into isolated networks. It is NOT a Layer 3 network gateway or router.
 
-# Interface on the 1173 / Isolated network
-bridge_internal_iface: "eth0"
-bridge_internal_gw: "10.2.16.1"
-
-# Routes to the internal fleet
-bridge_internal_routes:
-  - { network: "10.2.0.0/16", via: "10.2.16.1" }
-  - { network: "10.0.0.0/8", via: "10.2.16.1" }
-
-# Interface on the 2176 / Normal network
-bridge_external_iface: "Wired connection 1"
-
-# firewall ansible policy level 
+# 1. Security Posture: Only Management IPs can enter (The most restricted profile)
 pstat_firewall_profile: "access-level3-restricted"
+
+# 2. Capabilities: Minimal surface area, focused on admin access
 pstat_capabilities:
-  - campus_ssh
-  - admin_console
-  - network_bridge_transit
+  - campus_ssh      # Allow SSH from management (via the profile clamp)
+  - admin_console   # Allow Cockpit (port 9090) from management
+  - network_bridge_transit # Secure Pivot: Forwarding restricted to Management and Tailscale sources
+
+# 3. Identity: Local-only for high availability (Avoid circular dependencies)
+is_ldap_enabled: false
+
+# 4. Networking: Dual-homed for connectivity, but no kernel routing
+# Connectivity is maintained via dual NICs to Management and Internal networks.
+# SSH ProxyJump and Tunnelling are handled at the application layer.
