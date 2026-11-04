@@ -56,3 +56,18 @@ The "bugginess" we encountered is located in the **firewalld Python Daemon**, wh
 **Result**: Forwarding is now source‑aware, firewalld’s broken direct API is completely bypassed, and the security posture persists across firewalld reloads.
 
 **Lesson**: When firewalld’s direct interface is broken, use a custom nftables table that runs at a higher priority to enforce forwarding policies. Persist the table via `/etc/nftables.d/` and load it after the final firewalld reload.
+
+> **SUPERSEDED (2026-10-16):** See §8. We discovered a cleaner, *native* solution using firewalld **Policy Objects** that makes this nft shim unnecessary. The shim has been decommissioned on `seabastion`.
+
+## 8. Native Firewalld Policy Forwarding (supersedes §7)
+**Discovery**: Inter-interface forwarding **is** possible with native firewalld — via **Policy Objects** — on firewalld 1.3.4 / AlmaLinux 9, without `--direct` and without a custom nft table. The earlier conclusion that "policy forwarding is a dead end" was an **inspection error**, not a daemon limitation.
+
+**Empirical findings (verified on the live host):**
+1. A policy object compiles into `filter_FWD_policy_<name>` chains, dispatched from `filter_FORWARD_POLICIES_pre` by **interface pair** (`iifname … oifname … jump …`). It does **NOT** populate the zone `filter_FWD_<zone>_allow` chains — inspecting those made the policy look inert.
+2. `target=ACCEPT` on a policy is **source-blind** (matches interface pair, accepts all). To be **source-aware**, use `target=CONTINUE` + a `source ipset=… accept` rich rule (lands in `filter_FWD_policy_<name>_allow`).
+3. **Bidirectional** forwarding requires **two** policies (one per interface pair), because a policy is directional.
+4. `ct state` is **invalid** in a rich rule on this version (`INVALID_RULE: unknown element ct`); the return path uses `target=ACCEPT` on the reverse policy (safe — egress zone scopes replies to the tailnet NIC).
+
+**Ansible limitation**: The `ansible.posix.firewalld` module (1.6.2) has **no** `policy`/`ingress_zone`/`egress_zone` parameters and `target` is `required_by zone`. Policy objects must be driven by `firewall-cmd --permanent --policy` (shell), not the module. Use the module only for zone/interface/target, and `firewall-cmd` for policies.
+
+**Final design**: zones (module) + IPSets (templated XML) + `mgmt-ssh` INPUT policy + `ts-to-build`/`build-to-ts` FORWARD policies (`firewall-cmd`) + persistent sysctl. No nft shim, no `--direct`.

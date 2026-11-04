@@ -7,7 +7,12 @@
 ## Final Implementation
 
 ### Architecture Decision
-After exhausting firewalld's native mechanisms (rich rules, `--direct` API), we implemented a **dedicated nftables table** (`inet pstat_forward`) that hooks the FORWARD chain at priority `-10` — running **before** firewalld's table at `+10`. This is the project's established "bypass the broken layer" pattern.
+After exhausting firewalld's native mechanisms (rich rules, `--direct` API), we implemented two complementary fixes:
+
+1. **Policy extension** – the `mgmt‑ssh` policy now also contains a rule that allows `ssh` from the `tailscale` IPSet (`100.120.0.0/24`). This gives admin‑level access to Tailscale hosts without touching zones.
+2. **Dedicated nftables table** – a custom table `inet pstat_forward` that hooks the FORWARD chain at priority `-10` to enforce source‑aware forwarding. This runs **before** firewalld’s own table (`+10`).
+
+Both steps together realize the secure‑pivot while keeping the rest of the firewall model unchanged.
 
 ### What Was Deployed
 

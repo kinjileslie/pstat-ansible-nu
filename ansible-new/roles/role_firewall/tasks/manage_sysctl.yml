@@ -1,0 +1,19 @@
+---
+# manage_sysctl.yml
+# Kernel-level networking parameters required for the Secure Pivot.
+# firewalld controls packet FILTERING; the kernel must separately be told
+# to ROUTE between interfaces (ip_forward) and to enforce strict
+# reverse-path filtering (rp_filter) on a dual-homed host.
+
+- name: "SYSCTL | Enable IPv4 forwarding + strict RP filter"
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    sysctl_file: /etc/sysctl.d/99-pstat-routing.conf
+    reload: true
+  loop:
+    - { key: 'net.ipv4.ip_forward', value: '1' }
+    - { key: 'net.ipv4.conf.all.rp_filter', value: '1' }
+    - { key: 'net.ipv4.conf.default.rp_filter', value: '1' }
+  when: "'network_bridge_transit' in pstat_capabilities"

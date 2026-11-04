@@ -1,0 +1,74 @@
+---
+# manage_forward_policy.yml
+# Secure Pivot: Native Firewalld forwarding via Policy Objects (no nft shim).
+#
+# PROVEN on firewalld 1.3.4 (AlmaLinux 9):
+#   - A policy object compiles into `filter_FWD_policy_<name>` chains,
+#     dispatched from `filter_FORWARD_POLICIES_pre` by interface pair.
+#     (It does NOT populate the zone `filter_FWD_<zone>_allow` chains.)
+#   - Source-awareness requires `target=CONTINUE` + a `source ipset=` rich rule.
+#     A bare `target=ACCEPT` is source-blind (interface-pair only).
+#   - Bidirectional forwarding requires TWO policies, one per interface pair,
+#     because a policy is directional (single ingress/egress zone).
+#
+# The return path (build->tailnet) uses target=ACCEPT because firewalld
+# rich rules do not support `ct state` (INVALID_RULE: unknown element ct).
+# It is safe: the egress=trusted zone restricts replies to the tailnet NIC,
+# and only tailnet-initiated sessions can exist on that path.
+#
+# This task is idempotent: firewall-cmd --add-* commands report
+# "ALREADY_ENABLED" (handled) and we use `|| true` on object creation.
+
+- name: "FWD Policy | Strip legacy interface-based forward rules from all zones"
+  ansible.builtin.shell: |
+    for zone in public internal trusted; do
+      for rule in $(firewall-cmd --permanent --zone=$zone --list-rich-rules | grep -E 'oifname|iifname|forward' || true); do
+        firewall-cmd --permanent --zone=$zone --remove-rich-rule="$rule" 2>/dev/null || true
+      done
+    done
+  changed_when: false
+  when: "'network_bridge_transit' in pstat_capabilities"
+
+- name: "FWD Policy | Create policy object ({{ item.name }})"
+  ansible.builtin.shell: "firewall-cmd --permanent --new-policy={{ item.name }} || true"
+  loop: "{{ pstat_forwarding_policies }}"
+  changed_when: false
+  when: "'network_bridge_transit' in pstat_capabilities"
+
+- name: "FWD Policy | Configure ingress zone ({{ item.name }})"
+  ansible.builtin.shell: "firewall-cmd --permanent --policy={{ item.name }} --add-ingress-zone {{ item.ingress }}"
+  loop: "{{ pstat_forwarding_policies }}"
+  changed_when: false
+  when: "'network_bridge_transit' in pstat_capabilities"
+
+- name: "FWD Policy | Configure egress zone ({{ item.name }})"
+  ansible.builtin.shell: "firewall-cmd --permanent --policy={{ item.name }} --add-egress-zone {{ item.egress }}"
+  loop: "{{ pstat_forwarding_policies }}"
+  changed_when: false
+  when: "'network_bridge_transit' in pstat_capabilities"
+
+- name: "FWD Policy | Set policy target ({{ item.name }})"
+  ansible.builtin.shell: "firewall-cmd --permanent --policy={{ item.name }} --set-target {{ item.target }}"
+  loop: "{{ pstat_forwarding_policies }}"
+  changed_when: false
+  when: "'network_bridge_transit' in pstat_capabilities"
+
+- name: "FWD Policy | Ensure masquerade is enabled for {{ item.name }}"
+  ansible.builtin.shell: "firewall-cmd --permanent --policy={{ item.name }} --add-masquerade"
+  loop: "{{ pstat_forwarding_policies }}"
+  changed_when: false
+  when: "'network_bridge_transit' in pstat_capabilities"
+- name: "FWD Policy | Apply source-aware rules ({{ item.0.name }})"
+  ansible.builtin.shell: |
+    firewall-cmd --permanent --policy={{ item.0.name }} \
+      --add-rich-rule='rule family="ipv4" source {{ item.1.source | replace("ipset:", "ipset=") }} {{ item.1.action }}'
+  with_subelements:
+    - "{{ pstat_forwarding_policies }}"
+    - rules
+  changed_when: false
+  when: "'network_bridge_transit' in pstat_capabilities"
+
+# NOTE: Final verification (that the dispatch rules are present in the live
+# kernel) is done in tasks/main.yml AFTER the final `firewall-cmd --reload`,
+# because policy objects only appear in `filter_FORWARD_POLICIES_pre` once
+# firewalld reloads.

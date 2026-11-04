@@ -28,27 +28,69 @@
 - name: "FIREWALL | Apply Global Administrative Policies (VIP Lane)"
   ansible.builtin.include_tasks: manage_policy.yml
 
-- name: "FIREWALL | Dynamically Bind Interfaces to Zones (via UUID)"
-  shell: |
-    set -e
-    UUID=$(nmcli -t connection show --active | grep ":{{ item.value }}$" | cut -d: -f2)
-    if [ -z "$UUID" ]; then
-      echo "No active connection found for {{ item.key }}"
-      exit 0
-    fi
-    CONN_ID=$(nmcli -t connection show --active | grep ":{{ item.value }}$" | cut -d: -f1)
-    nmcli connection modify $UUID connection.zone {{ item.value }}
-    nmcli connection modify "$CONN_ID" connection.zone {{ item.value }}
-    nmcli connection up $UUID
+- name: "FIREWALL | Bind Interfaces to Zones (native, idempotent)"
+  ansible.posix.firewalld:
+    zone: "{{ item.value }}"
+    interface: "{{ item.key }}"
+    state: enabled
+    permanent: true
   loop: "{{ pstat_nic_zones | dict2items }}"
   changed_when: true
 
-- name: "FIREWALL | Final Reload to Synchronize Kernel State"
+- name: "FIREWALL | Enable kernel forwarding + RP filter (Secure Pivot)"
+  ansible.builtin.include_tasks: manage_sysctl.yml
+  when: "'network_bridge_transit' in pstat_capabilities"
+
+- name: "FIREWALL | Decommission legacy nft forwarding shim"
+  block:
+    - name: "FWD | Remove pstat_forward nft table (runtime)"
+      ansible.builtin.shell: "nft delete table inet pstat_forward 2>/dev/null || true"
+      changed_when: false
+    - name: "FWD | Remove pstat_forward nft file (persisted)"
+      ansible.builtin.file:
+        path: /etc/nftables.d/pstat-forward.nft
+        state: absent
+  when: "'network_bridge_transit' in pstat_capabilities"
+
+- name: "FIREWALL | Apply Secure Pivot Forwarding (native firewalld policies)"
+  ansible.builtin.include_tasks: manage_forward_policy.yml
+  # NOTE: manage_forward_policy.yml ends with a verification that reads the
+  # live kernel, so a reload must have happened since the policy XMLs were
+  # written. The "Second Reload" below (before this include) guarantees that.
+
+- name: "FIREWALL | Second Reload (sync policies + interfaces into kernel)"
   ansible.builtin.shell: "firewall-cmd --reload"
   changed_when: true
 
-- name: "FIREWALL | Apply Source-Aware Forwarding Rules (Secure Pivot, post-reload)"
-  ansible.builtin.include_tasks: manage_forwarding.yml
+- name: "FIREWALL | Verify Secure Pivot dispatch rules (post-reload)"
+  ansible.builtin.shell: "nft list chain inet firewalld filter_FORWARD_POLICIES_pre"
+  register: pivot_verify
+  changed_when: false
+  failed_when:
+    - "'network_bridge_transit' in pstat_capabilities"
+    - "'filter_FWD_policy_ts-to-build' not in pivot_verify.stdout"
+    - "'filter_FWD_policy_build-to-ts' not in pivot_verify.stdout"
+
+- name: "FIREWALL | Verify NO legacy Universal Router forward rules (post-reload)"
+  # The zone filter_FWD_*_allow chains must be EMPTY. If they contain any
+  # `oifname`/`iifname` accept rule, that's the old interface-based "Universal
+  # Router" pattern and the pivot is NOT source-aware — fail the run.
+  ansible.builtin.shell: |
+    for chain in filter_FWD_public_allow filter_FWD_internal_allow filter_FWD_trusted_allow; do
+      # Grab only rule lines (skip the chain header / closing brace)
+      rules=$(nft list chain inet firewalld $chain 2>/dev/null | grep -E 'oifname|iifname|accept' || true)
+      if [ -n "$rules" ]; then
+        echo "UNIVERSAL_ROUTER_DETECTED in $chain:"
+        echo "$rules"
+        exit 1
+      fi
+    done
+    echo "OK: no legacy forward rules in zone FWD_*_allow chains"
+  register: ur_check
+  changed_when: false
+  failed_when:
+    - "'network_bridge_transit' in pstat_capabilities"
+    - "ur_check.rc != 0"
 
 - name: Write Firewall Policy Version Breadcrumb
   ansible.builtin.copy:
@@ -56,7 +98,7 @@
       Policy Version: {{ ansible_date_time.date }} | Applied by {{ ansible_env.USER }}
       Profile: {{ pstat_firewall_profile | default('unspecified') }}
       Capabilities: {{ pstat_capabilities | join(', ') if pstat_capabilities is defined else 'none' }}
-      Architecture: Baseline L2-V2-Symmetry
+      Architecture: Baseline L2-V2-Symmetry (native firewalld pivot, no nft shim)
     dest: /etc/ansible/firewall_version.txt
     owner: root
     group: root

@@ -2,6 +2,13 @@
 # Firewall Configuration Defaults (V2 - Identity-Based Architecture)
 
 # --- Identity Registry ---
+
+# Egress zone for ts-to-build forwarding policy (default public). Can be overridden per host.
+# Set to "public" to masquerade to the public IP, or "internal" for internal‑side NAT.
+# This variable is used in pstat_forwarding_policies below.
+
+pstat_ts_to_build_egress: "public"
+
 # Define IP sets as: { name: 'set_name', type: 'hash:net' or 'hash:ip', ips: [ 'ip1', 'ip2' ] }
 pstat_ipsets:
   - name: management
@@ -33,9 +40,29 @@ pstat_firewall_policies:
   - name: mgmt-ssh
     ingress: "ANY"
     egress: "HOST"
+    target: "CONTINUE"
     rules:
       - { source: "ipset:management", service: "ssh", action: "accept" }
       - { source: "ipset:management", service: "cockpit", action: "accept" }
+      - { source: "ipset:tailscale", service: "ssh", action: "accept" }
+
+# --- Native Firewalld Forwarding Policies (Secure Pivot, no nft shim) ---
+# Proven on firewalld 1.3.4 (AlmaLinux 9): a policy object compiles into
+# filter_FWD_policy_<name> chains (NOT the zone filter_FWD_<zone>_allow chains).
+# Source-awareness requires target=CONTINUE + a `source ipset=` rich rule.
+# Bidirectional forwarding requires TWO policies (one per interface pair).
+pstat_forwarding_policies:
+  - name: ts-to-build
+    ingress: "trusted"
+    egress: "{{ pstat_ts_to_build_egress | default('public') }}"
+    target: "CONTINUE"
+    rules:
+      - { source: "ipset:tailscale", action: "accept" }
+  - name: build-to-ts
+    ingress: "internal"
+    egress: "trusted"
+    target: "ACCEPT"
+    rules: []
 
 # --- Capability Registry ---
 # Maps functional capabilities to technical rules.
@@ -69,9 +96,9 @@ pstat_capabilities: []
 
 # Mapping for NIC -> Zone (The "Labels")
 # Default: Most nodes use eth0 as 'public' for default-deny security.
+# Dual-homed / pivot nodes override this in host_vars (see seabastion.yml).
 pstat_nic_zones:
   eth0: "public"
-  eth1: "public"
 
 # Baseline zone definitions
 pstat_zones:

@@ -18,3 +18,19 @@ is_ldap_enabled: false
 # 4. Networking: Dual-homed for connectivity, but no kernel routing
 # Connectivity is maintained via dual NICs to Management and Internal networks.
 # SSH ProxyJump and Tunnelling are handled at the application layer.
+
+# 5. Secure Pivot: Bind each NIC to its logical zone.
+#    eth0 -> public (default-deny), eth1 -> internal (build subnet),
+#    tailscale0 -> trusted (tailnet). This is REQUIRED for the native
+#    firewalld forwarding policies (ts-to-build / build-to-ts) to match.
+
+# Optional override for the egress zone used by the ts-to-build forwarding policy.
+# Set to "public" (default) to masquerade to the public IP, or "internal" to use the
+# internal NIC address for NAT. This variable is read by role_firewall defaults.
+
+pstat_ts_to_build_egress: "public"
+
+pstat_nic_zones:
+  eth0: "public"
+  eth1: "internal"
+  tailscale0: "trusted"

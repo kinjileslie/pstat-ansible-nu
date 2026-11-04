@@ -18,10 +18,10 @@
   loop: "{{ pstat_firewall_policies }}"
   changed_when: true
 
-- name: "Policy | Set Policy Target to CONTINUE"
-  ansible.builtin.shell: "firewall-cmd --permanent --policy={{ item.name }} --set-target CONTINUE"
+- name: "Policy | Set Policy Target"
+  ansible.builtin.shell: "firewall-cmd --permanent --policy={{ item.name }} --set-target {{ item.target | default('CONTINUE') }}"
   loop: "{{ pstat_firewall_policies }}"
-  changed_when: true
+  changed_when: false
 
 - name: "Policy | Apply Policy Rules"
   ansible.builtin.shell: |
