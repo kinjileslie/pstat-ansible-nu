@@ -49,15 +49,33 @@ pstat_firewall_policies:
 # --- Native Firewalld Forwarding Policies (Secure Pivot, no nft shim) ---
 # Proven on firewalld 1.3.4 (AlmaLinux 9): a policy object compiles into
 # filter_FWD_policy_<name> chains (NOT the zone filter_FWD_<zone>_allow chains).
-# Source-awareness requires target=CONTINUE + a `source ipset=` rich rule.
-# Bidirectional forwarding requires TWO policies (one per interface pair).
+# Source-awareness requires a `source ipset=` rich rule.
+# target=ACCEPT is required: CONTINUE falls through to the zone's DROP.
+# Bidirectional forwarding requires policies per interface pair.
+#
+# Traffic paths:
+#   Tailnet → Build network (10.x.x.x):  ts-to-build     (trusted → public/eth0)
+#   Tailnet → Campus (128.x, 169.x):     ts-to-campus    (trusted → internal/eth1)
+#   Build network → Tailnet:             build-to-ts-eth0 (public/eth0 → trusted)
+#   Campus → Tailnet:                     build-to-ts      (internal/eth1 → trusted)
 pstat_forwarding_policies:
   - name: ts-to-build
     ingress: "trusted"
-    egress: "{{ pstat_ts_to_build_egress | default('public') }}"
-    target: "CONTINUE"
+    egress: "public"
+    target: "ACCEPT"
     rules:
       - { source: "ipset:tailscale", action: "accept" }
+  - name: ts-to-campus
+    ingress: "trusted"
+    egress: "internal"
+    target: "ACCEPT"
+    rules:
+      - { source: "ipset:tailscale", action: "accept" }
+  - name: build-to-ts-eth0
+    ingress: "public"
+    egress: "trusted"
+    target: "ACCEPT"
+    rules: []
   - name: build-to-ts
     ingress: "internal"
     egress: "trusted"

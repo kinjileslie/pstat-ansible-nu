@@ -14,6 +14,29 @@
     reload: true
   loop:
     - { key: 'net.ipv4.ip_forward', value: '1' }
-    - { key: 'net.ipv4.conf.all.rp_filter', value: '1' }
-    - { key: 'net.ipv4.conf.default.rp_filter', value: '1' }
+    - { key: 'net.ipv4.conf.all.rp_filter', value: '2' }
+    - { key: 'net.ipv4.conf.default.rp_filter', value: '2' }
+  when: "'network_bridge_transit' in pstat_capabilities"
+
+- name: "SYSCTL | Write persistent routes for campus subnets via eth1"
+  ansible.builtin.copy:
+    content: |
+      # Routes for campus subnets via the internal NIC (eth1) gateway.
+      # Traffic must go via the gateway (169.231.224.1), not directly on the L2 segment,
+      # because 128.111.x.x and 169.231.x.x are on different L2 segments.
+      128.111.0.0/16 via 169.231.224.1 dev eth1
+      169.229.0.0/16 via 169.231.224.1 dev eth1
+      169.232.0.0/15 via 169.231.224.1 dev eth1
+    dest: /etc/sysconfig/network-scripts/route-eth1
+    owner: root
+    group: root
+    mode: '0644'
+  when: "'network_bridge_transit' in pstat_capabilities"
+
+- name: "SYSCTL | Apply campus routes immediately"
+  ansible.builtin.shell: |
+    ip route replace 128.111.0.0/16 via 169.231.224.1 dev eth1
+    ip route replace 169.229.0.0/16 via 169.231.224.1 dev eth1
+    ip route replace 169.232.0.0/15 via 169.231.224.1 dev eth1
+  changed_when: false
   when: "'network_bridge_transit' in pstat_capabilities"

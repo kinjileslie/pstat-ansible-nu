@@ -2,6 +2,9 @@
 <zone target="{{ pstat_zone_target | default('DROP') }}">
   <!-- Build ID: {{ ansible_date_time.iso8601 }} -->
   <short>{{ zone_name }}</short>
+  {% if 'network_bridge_transit' in pstat_capabilities and zone_name in ['trusted', 'internal'] %}
+  <forward>yes</forward>
+  {% endif %}
   {% set profile_hierarchy = {'access-level1-public': 1, 'access-level2-internal': 2, 'access-level3-restricted': 3} %}
   {% set host_level = profile_hierarchy[pstat_firewall_profile | default('access-level3-restricted')] %}
   {% for cap in pstat_capabilities %}
@@ -30,4 +33,19 @@
       {% endif %}
     {% endif %}
   {% endfor %}
+  {% if zone_name == 'trusted' and 'network_bridge_transit' in pstat_capabilities %}
+  <rule family="ipv4">
+    <source ipset="tailscale"/>
+    <icmp-type name="echo-request"/>
+    <accept/>
+  </rule>
+  <rule family="ipv4">
+    <source ipset="tailscale"/>
+    <port port="22" protocol="tcp"/>
+    <accept/>
+  </rule>
+  {% endif %}
+  {% if 'network_bridge_transit' in pstat_capabilities and zone_name in ['public', 'internal'] %}
+  <masquerade/>
+  {% endif %}
 </zone>

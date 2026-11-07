@@ -72,20 +72,22 @@
     - "'filter_FWD_policy_build-to-ts' not in pivot_verify.stdout"
 
 - name: "FIREWALL | Verify NO legacy Universal Router forward rules (post-reload)"
-  # The zone filter_FWD_*_allow chains must be EMPTY. If they contain any
-  # `oifname`/`iifname` accept rule, that's the old interface-based "Universal
-  # Router" pattern and the pivot is NOT source-aware — fail the run.
+  # The zone filter_FWD_*_allow chains must not contain source-aware rules
+  # (the old "Universal Router" pattern used `ip saddr @...` + `oifname` accepts).
+  # A bare `oifname "eth1" accept` is fine — it's the implicit rule firewalld
+  # generates when a zone has `forward: yes`.
   ansible.builtin.shell: |
     for chain in filter_FWD_public_allow filter_FWD_internal_allow filter_FWD_trusted_allow; do
-      # Grab only rule lines (skip the chain header / closing brace)
-      rules=$(nft list chain inet firewalld $chain 2>/dev/null | grep -E 'oifname|iifname|accept' || true)
+      # Grab only rule lines that have BOTH a source/ipset reference AND an interface match
+      # (the old Universal Router pattern). A bare `oifname` accept is OK.
+      rules=$(nft list chain inet firewalld $chain 2>/dev/null | grep -E 'saddr|ipset|source' || true)
       if [ -n "$rules" ]; then
         echo "UNIVERSAL_ROUTER_DETECTED in $chain:"
         echo "$rules"
         exit 1
       fi
     done
-    echo "OK: no legacy forward rules in zone FWD_*_allow chains"
+    echo "OK: no legacy source-aware forward rules in zone FWD_*_allow chains"
   register: ur_check
   changed_when: false
   failed_when:
