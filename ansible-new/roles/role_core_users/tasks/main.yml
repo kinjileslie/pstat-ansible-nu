@@ -30,13 +30,19 @@
     state: present
     key: "{{ pstat_key_nu_pink }}"
 
-- name: "USER | Configure passwordless sudo"
-  copy:
-    content: "%{{ item.name }} ALL=(ALL) NOPASSWD: ALL"
+- name: "USER | Configure admin sudoers (password required)"
+  template:
+    src: sudoers_admin.j2
     dest: "/etc/sudoers.d/{{ pstat_sudoers_file }}"
     mode: '0440'
     validate: /usr/sbin/visudo -cf %s
-  loop: "{{ pstat_admin_users }}"
+
+- name: "USER | Configure passwordless sudo for automation user (almalinux)"
+  template:
+    src: sudoers_automation.j2
+    dest: "/etc/sudoers.d/{{ pstat_automation_sudoers_file }}"
+    mode: '0440'
+    validate: /usr/sbin/visudo -cf %s
 
 - name: "USER | Enable systemd linger"
   command: "loginctl enable-linger {{ item.name }}"

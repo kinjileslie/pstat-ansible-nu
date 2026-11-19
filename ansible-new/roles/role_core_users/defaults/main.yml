@@ -23,3 +23,5 @@ pstat_enable_linger: true
 
 # The sudoers file name to be created in /etc/sudoers.d/
 pstat_sudoers_file: "pstat_admins"
+# File name for the automation user password‑less sudo entry
+pstat_automation_sudoers_file: "pstat_automation"

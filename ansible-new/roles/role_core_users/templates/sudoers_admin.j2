@@ -1,0 +1,7 @@
+# -------------------------------------------------
+#  Admin sudoers – password required
+#  Managed by Ansible (role_core_users)
+# -------------------------------------------------
+{% for user in pstat_admin_users %}
+%{{ user.name }}  ALL=(ALL)  ALL
+{% endfor %}
