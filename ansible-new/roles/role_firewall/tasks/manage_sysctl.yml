@@ -18,25 +18,35 @@
     - { key: 'net.ipv4.conf.default.rp_filter', value: '2' }
   when: "'network_bridge_transit' in pstat_capabilities"
 
-- name: "SYSCTL | Write persistent routes for campus subnets via eth1"
-  ansible.builtin.copy:
-    content: |
-      # Routes for campus subnets via the internal NIC (eth1) gateway.
-      # Traffic must go via the gateway (169.231.224.1), not directly on the L2 segment,
-      # because 128.111.x.x and 169.231.x.x are on different L2 segments.
-      128.111.0.0/16 via 169.231.224.1 dev eth1
-      169.229.0.0/16 via 169.231.224.1 dev eth1
-      169.232.0.0/15 via 169.231.224.1 dev eth1
-    dest: /etc/sysconfig/network-scripts/route-eth1
-    owner: root
-    group: root
-    mode: '0644'
+- name: "SYSCTL | Add persistent campus routes via NetworkManager"
+  ansible.builtin.shell: "sudo nmcli connection modify {{ bridge_internal_iface | default('eth1') }} +ipv4.routes '{{ item.network }} {{ item.via }}'"
+  loop:
+    - { network: "128.111.0.0/16", via: "169.231.224.1" }
+    - { network: "169.229.0.0/16", via: "169.231.224.1" }
+    - { network: "169.232.0.0/15", via: "169.231.224.1" }
+  changed_when: false
+  failed_when: false
   when: "'network_bridge_transit' in pstat_capabilities"
 
-- name: "SYSCTL | Apply campus routes immediately"
-  ansible.builtin.shell: |
-    ip route replace 128.111.0.0/16 via 169.231.224.1 dev eth1
-    ip route replace 169.229.0.0/16 via 169.231.224.1 dev eth1
-    ip route replace 169.232.0.0/15 via 169.231.224.1 dev eth1
+- name: "SYSCTL | Re-activate internal interface to apply routes"
+  ansible.builtin.shell: "sudo nmcli connection up {{ bridge_internal_iface | default('eth1') }}"
   changed_when: false
   when: "'network_bridge_transit' in pstat_capabilities"
+
+- name: "SYSCTL | Verify campus routes are present"
+  ansible.builtin.shell: "ip route get {{ item }} 2>/dev/null | grep -q 'via' && echo 'OK'"
+  loop:
+    - "128.111.219.36"
+    - "169.229.1.1"
+    - "169.232.1.1"
+  register: route_check
+  changed_when: false
+  failed_when: false
+  when: "'network_bridge_transit' in pstat_capabilities"
+
+- name: "SYSCTL | Warn if campus routes are missing"
+  ansible.builtin.debug:
+    msg: "WARNING: Campus routes not found for {{ item.item }}: {{ item.stdout }}"
+  loop: "{{ route_check.results | default([]) }}"
+  when: "item.stdout != 'OK'"
+
