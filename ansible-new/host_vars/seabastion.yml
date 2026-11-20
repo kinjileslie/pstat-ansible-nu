@@ -12,6 +12,17 @@ pstat_capabilities:
   - admin_console   # Allow Cockpit (port 9090) from management
   - network_bridge_transit # Secure Pivot: Forwarding restricted to Management and Tailscale sources
 
+# --- Network Bridge Overrides for dual‑homed seabastion ---
+# Public NIC (default gateway) is eth0; internal NIC is eth1.
+bridge_internal_iface: eth1
+bridge_external_iface: eth0
+# Internal gateway (campus side) – same as the route we already persist.
+bridge_internal_gw: 169.231.224.1
+bridge_internal_routes:
+  - { network: "128.111.0.0/16", via: "169.231.224.1" }
+  - { network: "169.229.0.0/16", via: "169.231.224.1" }
+  - { network: "169.232.0.0/15", via: "169.231.224.1" }
+
 # 3. Identity: Local-only for high availability (Avoid circular dependencies)
 is_ldap_enabled: false
 
